@@ -1,42 +1,64 @@
-name: Trigger auto deployment for demo-container
+  name: Auto Deployment with Azure Service Principal
 
 env:
   AZURE_CONTAINER_APP_NAME: workflow
   AZURE_GROUP_NAME: workflow-resource-group
-  AZURE_REGION: eastus
-  REPO: ${{ github.repository }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-# When this action will be executed
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger
 
 jobs:
-  build:
+  create_or_use_sp:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout to the branch
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Log in to GitHub container registry
-        uses: docker/login-action@v1.10.0
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Check if Service Principal exists
+        id: check_sp
+        run: |
+          echo "Checking if Service Principal already exists..."
+          
+          # Check if the SP already exists by querying its AppId (client id)
+          sp_id=$(az ad sp show --id "http://github-actions-sp" --query "appId" -o tsv || echo "")
 
-      - name: Build and push container image to registry
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          tags: ghcr.io/${{ env.REPO }}:${{ github.sha }}
-          file: ./Dockerfile
+          if [ -z "$sp_id" ]; then
+            echo "Service Principal does not exist. Creating a new one..."
+
+            # Create the Service Principal if it doesn't exist
+            sp_info=$(az ad sp create-for-rbac --name "github-actions-sp" --role Contributor --scopes /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }} --query "{appId: appId, password: password, tenant: tenant}" -o json)
+
+            # Extract the values from the output
+            AZURE_CLIENT_ID=$(echo $sp_info | jq -r .appId)
+            AZURE_CLIENT_SECRET=$(echo $sp_info | jq -r .password)
+            AZURE_TENANT_ID=$(echo $sp_info | jq -r .tenant)
+
+            # Store the SP credentials in GitHub Environment for subsequent steps
+            echo "SP created: Client ID, Secret, Tenant ID are stored."
+          else
+            echo "Service Principal already exists. Using existing SP."
+            
+            # Fetch the existing SP credentials
+            AZURE_CLIENT_ID=$sp_id
+            AZURE_CLIENT_SECRET=$(az ad sp credential reset --name $sp_id --query "password" -o tsv)
+            AZURE_TENANT_ID=$(az ad sp show --id $sp_id --query "tenant" -o tsv)
+
+            # Store existing SP credentials
+            echo "Existing SP credentials fetched."
+          fi
+
+          # Save the credentials to GitHub Environment variables for the next steps
+          echo "CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
+          echo "CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV
+          echo "TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
+
 
   deploy:
     runs-on: ubuntu-latest
