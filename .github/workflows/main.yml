@@ -3,7 +3,7 @@ name: Auto Deployment with Azure Service Principal
 env:
   AZURE_CONTAINER_APP_NAME: workflow
   AZURE_GROUP_NAME: workflow-resource-group
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}  # 从 GitHub Secrets 中获取
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_REGION: eastus
 
 on:
@@ -18,12 +18,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2  # 使用最新的 v2 版本
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}  # 确保添加 subscriptionId
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Check if resource group exists and create if needed
         run: |
