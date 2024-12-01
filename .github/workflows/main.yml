@@ -47,7 +47,8 @@ jobs:
 
       - name: Check if container app exists and create if needed
         run: |
-          CONTAINER_APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query "name" -o tsv)
+          # Check if the container app exists by listing apps in the resource group
+          CONTAINER_APP_EXISTS=$(az containerapp list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='${{ env.AZURE_CONTAINER_APP_NAME }}'].name" -o tsv)
           if [[ -z "$CONTAINER_APP_EXISTS" ]]; then
             echo "Creating container app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
             az containerapp create \
