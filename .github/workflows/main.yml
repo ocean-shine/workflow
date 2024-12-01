@@ -1,9 +1,10 @@
-  name: Auto Deployment with Azure Service Principal
+name: Auto Deployment with Azure Service Principal
 
 env:
   AZURE_CONTAINER_APP_NAME: workflow
   AZURE_GROUP_NAME: workflow-resource-group
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_REGION: eastus  # 你可以根据需要调整区域
 
 on:
   workflow_dispatch:  # Manual trigger
@@ -59,18 +60,21 @@ jobs:
           echo "CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV
           echo "TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
 
-
   deploy:
     runs-on: ubuntu-latest
-    needs: build
+    needs: create_or_use_sp
 
     steps:
-      - name: Azure Login
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Azure Login with Service Principal
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ env.CLIENT_ID }}
+          client-secret: ${{ env.CLIENT_SECRET }}
+          tenant-id: ${{ env.TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Check if resource group exists and create if needed
         run: |
@@ -92,7 +96,7 @@ jobs:
             echo "Container app environment already exists"
           fi
 
-      - name: Deploy to containerapp
+      - name: Deploy to Azure Container App
         uses: azure/CLI@v1
         with:
           inlineScript: |
