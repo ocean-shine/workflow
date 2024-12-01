@@ -3,15 +3,11 @@ name: Trigger auto deployment for demo-container
 env:
   AZURE_CONTAINER_APP_NAME: workflow
   AZURE_GROUP_NAME: workflow-resource-group
+  AZURE_REGION: eastus
+  REPO: ${{ github.repository }}
 
 # When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo. Remove comments to enable
-  #push:
-  #  branches:
-  #    [ main ]
-
-  # Allow mannually trigger
   workflow_dispatch:
 
 jobs:
@@ -50,23 +46,47 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Check if resource group exists and create if needed
+        run: |
+          RESOURCE_GROUP=$(az group exists --name ${{ env.AZURE_GROUP_NAME }})
+          if [[ "$RESOURCE_GROUP" == "false" ]]; then
+            echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
+            az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+          else
+            echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
+          fi
+
+      - name: Check if container app environment exists and create if needed
+        run: |
+          ENVIRONMENT_EXISTS=$(az containerapp env show --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --query "name" -o tsv)
+          if [[ -z "$ENVIRONMENT_EXISTS" ]]; then
+            echo "Creating container app environment: agent-environment"
+            az containerapp env create --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+          else
+            echo "Container app environment already exists"
+          fi
 
       - name: Deploy to containerapp
         uses: azure/CLI@v1
         with:
           inlineScript: |
             az config set extension.use_dynamic_install=yes_without_prompt
-            az containerapp registry set -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --server ghcr.io --username  ${{ github.actor }} --password ${{ secrets.GHCR_TOKEN }}
-            
-            # Removed search API environment variables since you're no longer using Azure Search
-            az containerapp update -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --set-env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://demo-alfredo-openai.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2023-07-01-preview"
 
-            # Update resource limits (CPU, Memory) if needed
-            az containerapp update -n demo-container -g demo-container --cpu 2 --memory 4Gi
+            # Authenticate with GitHub container registry
+            az containerapp registry set -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --server ghcr.io --username ${{ github.actor }} --password ${{ secrets.GHCR_TOKEN }}
             
-            # Update image to deploy new version
-            az containerapp update -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --image ghcr.io/${{ env.REPO }}:${{ github.sha }}
+            # Create or update the container app
+            az containerapp up \
+              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.AZURE_GROUP_NAME }} \
+              --image ghcr.io/${{ env.REPO }}:${{ github.sha }} \
+              --environment agent-environment \
+              --cpu 2 --memory 4Gi \
+              --set-env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://demo-alfredo-openai.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2023-07-01-preview"
+            
+            # Optionally, update the resource limits if needed
+            az containerapp update -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --cpu 2 --memory 4Gi
