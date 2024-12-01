@@ -36,7 +36,8 @@ jobs:
 
       - name: Check if container app environment exists and create if needed
         run: |
-          ENVIRONMENT_EXISTS=$(az containerapp env show --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --query "name" -o tsv)
+          # Check if the environment exists by listing all environments in the resource group
+          ENVIRONMENT_EXISTS=$(az containerapp env list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='agent-environment'].name" -o tsv)
           if [[ -z "$ENVIRONMENT_EXISTS" ]]; then
             echo "Creating container app environment: agent-environment"
             az containerapp env create --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
