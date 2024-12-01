@@ -28,7 +28,7 @@ client = AzureOpenAI(
 app = FastAPI()
 
 # 初始化 Sentence-Transformer 模型
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('paraphrase-distilroberta-base-v1')
 
 # 读取 CSV 文件（假设文件名为 wine-ratings.csv）
 wine_data = pd.read_csv('wine-ratings.csv')
