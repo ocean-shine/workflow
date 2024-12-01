@@ -17,56 +17,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Check if Service Principal exists
-        id: check_sp
-        run: |
-          echo "Checking if Service Principal already exists..."
-
-          # Check if the Service Principal exists by querying its AppId (client id)
-          sp_id=$(az ad sp show --id "http://github-actions-sp" --query "appId" -o tsv || echo "")
-
-          if [ -z "$sp_id" ]; then
-            echo "Service Principal does not exist. Creating a new one..."
-
-            # Create the Service Principal if it doesn't exist
-            sp_info=$(az ad sp create-for-rbac --name "github-actions-sp" --role Contributor --scopes /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }} --query "{appId: appId, password: password, tenant: tenant}" -o json)
-
-            # Extract the values from the output
-            AZURE_CLIENT_ID=$(echo $sp_info | jq -r .appId)
-            AZURE_CLIENT_SECRET=$(echo $sp_info | jq -r .password)
-            AZURE_TENANT_ID=$(echo $sp_info | jq -r .tenant)
-
-            # Store the SP credentials in GitHub Environment for subsequent steps
-            echo "SP created: Client ID, Secret, Tenant ID are stored."
-
-            # Store in GitHub environment for future steps
-            echo "CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
-            echo "CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV
-            echo "TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
-
-          else
-            echo "Service Principal already exists. Using existing SP."
-
-            # Fetch the existing SP credentials
-            AZURE_CLIENT_ID=$sp_id
-            AZURE_CLIENT_SECRET=$(az ad sp credential reset --name $sp_id --query "password" -o tsv)
-            AZURE_TENANT_ID=$(az ad sp show --id $sp_id --query "tenant" -o tsv)
-
-            # Store existing SP credentials in GitHub environment
-            echo "Existing SP credentials fetched."
-
-            # Store in GitHub environment for future steps
-            echo "CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
-            echo "CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV
-            echo "TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
-          fi
-
       - name: Azure Login
         uses: azure/login@v1
         with:
-          client-id: ${{ env.CLIENT_ID }}
-          client-secret: ${{ env.CLIENT_SECRET }}
-          tenant-id: ${{ env.TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Check if resource group exists and create if needed
         run: |
