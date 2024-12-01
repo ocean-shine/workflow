@@ -55,7 +55,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 6: Check if resource group exists and create if needed
+      # Step 6: Install the Azure CLI Configuration Extension
+      - name: Install azure-cli-configuration extension
+        run: |
+          az extension add --name azure-cli-configuration
+
+      # Step 7: Check if resource group exists and create if needed
       - name: Check if resource group exists and create if needed
         run: |
           RESOURCE_GROUP=$(az group exists --name ${{ env.AZURE_GROUP_NAME }})
@@ -66,7 +71,7 @@ jobs:
             echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
           fi
 
-      # Step 7: Check if container app environment exists and create if needed
+      # Step 8: Check if container app environment exists and create if needed
       - name: Check if container app environment exists and create if needed
         run: |
           ENVIRONMENT_EXISTS=$(az containerapp env list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='agent-environment'].name" -o tsv)
@@ -77,7 +82,7 @@ jobs:
             echo "Container app environment already exists"
           fi
 
-      # Step 8: Check if container app exists and create if needed
+      # Step 9: Check if container app exists and create if needed
       - name: Check if container app exists and create if needed
         run: |
           CONTAINER_APP_EXISTS=$(az containerapp list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='${{ env.AZURE_CONTAINER_APP_NAME }}'].name" -o tsv)
@@ -94,7 +99,7 @@ jobs:
             echo "Container app already exists"
           fi
 
-      # Step 9: Deploy the container app
+      # Step 10: Deploy the container app
       - name: Deploy to containerapp
         uses: azure/CLI@v1
         with:
