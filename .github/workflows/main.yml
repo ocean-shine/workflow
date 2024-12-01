@@ -1,8 +1,8 @@
 name: Trigger auto deployment for demo-container
 
 env:
-  AZURE_CONTAINER_APP_NAME: demo-container
-  AZURE_GROUP_NAME: demo-container
+  AZURE_CONTAINER_APP_NAME: workflow
+  AZURE_GROUP_NAME: workflow-resource-group
 
 # When this action will be executed
 on:
