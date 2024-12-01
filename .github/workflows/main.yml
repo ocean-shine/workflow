@@ -57,7 +57,7 @@ jobs:
               --image ghcr.io/${{ env.REPO }}:${{ github.sha }} \
               --environment agent-environment \
               --cpu 2 --memory 4Gi \
-              --set-env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://demo-alfredo-openai.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2023-07-01-preview"
+              --env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://aiocean.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2024-08-01-preview"
           else
             echo "Container app already exists"
           fi
@@ -78,7 +78,7 @@ jobs:
               --image ghcr.io/${{ env.REPO }}:${{ github.sha }} \
               --environment agent-environment \
               --cpu 2 --memory 4Gi \
-              --set-env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://demo-alfredo-openai.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2023-07-01-preview"
+              --env-vars OPENAI_API_TYPE=azure OPENAI_API_BASE=https://aiocean.openai.azure.com/ OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} OPENAI_API_VERSION="2024-08-01-preview"
             
             # Optionally, update the resource limits if needed
             az containerapp update -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --cpu 2 --memory 4Gi
