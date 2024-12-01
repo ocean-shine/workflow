@@ -27,9 +27,9 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN }}  # 使用 GHCR Token 登录
 
-      # 3. Check if the Docker image exists on GHCR
+      # 3. Check if Docker image exists
       - name: Check if Docker image exists
         id: check_image
         run: |
@@ -42,7 +42,7 @@ jobs:
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
           fi
 
-      # 4. Build and push Docker image if it does not exist
+      # 4. Build and Push Docker image if it does not exist
       - name: Build and Push Docker image
         if: env.IMAGE_EXISTS == 'false'
         run: |
