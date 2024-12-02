@@ -46,15 +46,19 @@ jobs:
 
     
      
-      # Step 4 to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
+      
+      # Step4 to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
       - name: Check for file changes
         run: |
-          # Check if HEAD exists (not the first commit)
-          if git rev-parse --verify HEAD &>/dev/null; then
-            # Not the first commit, compare with the previous commit (HEAD~1)
-            git diff --exit-code --quiet HEAD~1 HEAD -- Dockerfile
+          # Get the current commit SHA
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          # Get the previous commit SHA (if it exists)
+          PREVIOUS_COMMIT=$(git rev-parse HEAD^1 || echo "no-previous-commit")
+    
+          # Check if Dockerfile has been modified
+          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
+            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- Dockerfile
           else
-            # First commit, compare with no history (empty commit)
             git diff --exit-code --quiet -- Dockerfile
           fi
           if [ $? -eq 0 ]; then
@@ -66,8 +70,8 @@ jobs:
           fi
     
           # Check if requirements.txt has been modified
-          if git rev-parse --verify HEAD &>/dev/null; then
-            git diff --exit-code --quiet HEAD~1 HEAD -- requirements.txt
+          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
+            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- requirements.txt
           else
             git diff --exit-code --quiet -- requirements.txt
           fi
@@ -80,8 +84,8 @@ jobs:
           fi
     
           # Check if .github/workflows/main.yml has been modified
-          if git rev-parse --verify HEAD &>/dev/null; then
-            git diff --exit-code --quiet HEAD~1 HEAD -- .github/workflows/main.yml
+          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
+            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- .github/workflows/main.yml
           else
             git diff --exit-code --quiet -- .github/workflows/main.yml
           fi
@@ -92,7 +96,7 @@ jobs:
             echo ".github/workflows/main.yml has been modified."
             echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
           fi
-        shell: bash  # Make sure to specify a valid shell
+        shell: bash  # Ensure to use bash for compatibility
         env:
           AZURE_CONTAINER_APP_NAME: workflow
           AZURE_GROUP_NAME: workflow-resource-group
@@ -104,9 +108,8 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           pythonLocation: /opt/hostedtoolcache/Python/3.10.15/x64
           LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.15/x64/lib
-
     
-    
+        
 
       
       # Step 5: Check if Docker image exists on GHCR
