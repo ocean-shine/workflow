@@ -25,7 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Python 3.10 (using actions/setup-python@v2)
+      # Step 2: Set up Python 3.10
       - name: Set up Python 3.10.15
         uses: actions/setup-python@v2
         with:
@@ -44,7 +44,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 4: Check if Docker image exists
+      # Step 4: Check if Dockerfile has been modified
+      - name: Check if Dockerfile has been modified
+        id: check_dockerfile
+        run: |
+          # Check if Dockerfile is modified
+          git diff --exit-code --quiet Dockerfile
+          if [ $? -eq 0 ]; then
+            echo "Dockerfile has not been modified."
+            echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
+          else
+            echo "Dockerfile has been modified."
+            echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
+
+      # Step 5: Check if Docker image exists
       - name: Check if Docker image exists
         id: check_image
         run: |
@@ -55,22 +68,22 @@ jobs:
           else
             echo "Image does not exist on GHCR."
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
-          fi
 
-      # Step 5: Build and Push Docker image if it does not exist
+      # Step 6: Build and Push Docker image if Dockerfile is modified or image does not exist
       - name: Build and Push Docker image
-        if: env.IMAGE_EXISTS == 'false'
+        if: env.DOCKERFILE_MODIFIED == 'true' || env.IMAGE_EXISTS == 'false'
         run: |
+          echo "Building and pushing Docker image..."
           docker build -t ${{ env.IMAGE_NAME }} .
           docker push ${{ env.IMAGE_NAME }}
 
-      # Step 6: Azure Login (Use Azure service principal credentials)
+      # Step 7: Azure Login (Use Azure service principal credentials)
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 7: Authenticate with GitHub Container Registry in Azure
+      # Step 8: Authenticate with GitHub Container Registry in Azure
       - name: Authenticate Azure Container App with GHCR
         run: |
           echo "Authenticating with GitHub Container Registry..."
@@ -82,7 +95,7 @@ jobs:
             --password ${{ secrets.GHCR_TOKEN }} \
             --debug
 
-      # Step 8: Check if resource group exists and create if needed
+      # Step 9: Check if resource group exists and create if needed
       - name: Check if resource group exists and create if needed
         run: |
           echo "Checking if resource group exists..."
@@ -94,7 +107,7 @@ jobs:
             echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
           fi
 
-      # Step 9: Check if container app environment exists and create if needed
+      # Step 10: Check if container app environment exists and create if needed
       - name: Check if container app environment exists and create if needed
         run: |
           echo "Checking if container app environment exists..."
@@ -106,7 +119,7 @@ jobs:
             echo "Container app environment already exists"
           fi
 
-      # Step 10: Check if container app exists, create or update accordingly
+      # Step 11: Check if container app exists, create or update accordingly
       - name: Check if container app exists and create or update
         run: |
           echo "Checking if container app exists..."
@@ -142,4 +155,3 @@ jobs:
               --image ${{ env.IMAGE_NAME }} \
               --tags "environment=production" \
               --debug
-          fi
