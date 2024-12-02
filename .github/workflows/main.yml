@@ -44,10 +44,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 4: Check if Dockerfile has been modified
-      - name: Check if Dockerfile has been modified
-        id: check_dockerfile
+      # Step 4: Check if Dockerfile or requirements.txt has been modified
+      - name: Check if Dockerfile or requirements.txt has been modified
+        id: check_dockerfile_requirements
         run: |
+          # Check if Dockerfile has been modified
           git diff --exit-code --quiet Dockerfile
           if [ $? -eq 0 ]; then
             echo "Dockerfile has not been modified."
@@ -55,6 +56,16 @@ jobs:
           else
             echo "Dockerfile has been modified."
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
+          fi
+      
+          # Check if requirements.txt has been modified
+          git diff --exit-code --quiet requirements.txt
+          if [ $? -eq 0 ]; then
+            echo "requirements.txt has not been modified."
+            echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
+          else
+            echo "requirements.txt has been modified."
+            echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
           fi
         shell: bash
         env:
@@ -66,8 +77,7 @@ jobs:
           OPENAI_API_BASE: ${{ env.OPENAI_API_BASE }}
           OPENAI_API_VERSION: ${{ env.OPENAI_API_VERSION }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-
-
+      
       # Step 5: Check if Docker image exists on GHCR
       - name: Check if Docker image exists
         id: check_image
@@ -83,14 +93,15 @@ jobs:
             echo "Failed to check image existence. HTTP status: $IMAGE_EXISTS"
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
           fi
-
-      # Step 6: Build and Push Docker image if Dockerfile is modified or image does not exist
-      - name: Build and Push Docker image
-        if: env.DOCKERFILE_MODIFIED == 'true' || env.IMAGE_EXISTS == 'false'
+      
+      # Step 6: Docker build if Dockerfile or requirements.txt is modified
+      - name: Build Docker image if modified
+        if: ${{ env.DOCKERFILE_MODIFIED == 'true' || env.REQUIREMENTS_MODIFIED == 'true' }}
         run: |
-          echo "Building and pushing Docker image..."
+          echo "Dockerfile or requirements.txt modified, rebuilding the Docker image..."
           docker build -t ${{ env.IMAGE_NAME }} .
           docker push ${{ env.IMAGE_NAME }}
+      
 
       # Step 7: Azure Login (Use Azure service principal credentials)
       - name: Azure Login
