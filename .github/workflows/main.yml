@@ -117,8 +117,8 @@ jobs:
             az containerapp create \
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_GROUP_NAME }} \
-              --environment agent-environment \
               --image ${{ env.IMAGE_NAME }} \
+              --environment agent-environment \
               --cpu 2.0 --memory 4Gi \
               --env-vars AZURE_OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
               --tags "environment=production" \
@@ -140,20 +140,6 @@ jobs:
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_GROUP_NAME }} \
               --image ${{ env.IMAGE_NAME }} \
-              --environment agent-environment \
-              --cpu 2.0 --memory 4Gi \
-              --env-vars AZURE_OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
               --tags "environment=production" \
-              --registry-server ghcr.io \
-              --registry-username ${{ github.actor }} \
-              --registry-password ${{ secrets.GHCR_TOKEN }} \
-              --ingress external \
-              --target-port 80 \
-              --scale-rule-name "http-scaling-rule" \
-              --scale-rule-http-concurrency 50 \
-              --min-replicas 1 \
-              --max-replicas 3 \
-              --revision-suffix "v1" \
-              --workload-profile-name Consumption \
               --debug
           fi
