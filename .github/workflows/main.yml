@@ -55,9 +55,18 @@ jobs:
           else
             echo "Dockerfile has been modified."
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
+          fi
         shell: bash
         env:
-          ACTIONS_STEP_DEBUG: true
+          AZURE_CONTAINER_APP_NAME: ${{ env.AZURE_CONTAINER_APP_NAME }}
+          AZURE_GROUP_NAME: ${{ env.AZURE_GROUP_NAME }}
+          AZURE_REGION: ${{ env.AZURE_REGION }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          OPENAI_API_BASE: ${{ env.OPENAI_API_BASE }}
+          OPENAI_API_VERSION: ${{ env.OPENAI_API_VERSION }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
 
       # Step 5: Check if Docker image exists on GHCR
       - name: Check if Docker image exists
