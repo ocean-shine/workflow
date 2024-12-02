@@ -55,50 +55,66 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 6: Check if resource group exists and create if needed
+      # Step 6: Authenticate with GitHub Container Registry in Azure
+      - name: Authenticate Azure Container App with GHCR
+        run: |
+          echo "Authenticating with GitHub Container Registry..."
+          az containerapp registry set \
+            --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.AZURE_GROUP_NAME }} \
+            --server ghcr.io \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GHCR_TOKEN }} \
+            --debug
+
+      # Step 7: Check if resource group exists and create if needed
       - name: Check if resource group exists and create if needed
         run: |
-          RESOURCE_GROUP=$(az group exists --name ${{ env.AZURE_GROUP_NAME }})
+          echo "Checking if resource group exists..."
+          RESOURCE_GROUP=$(az group exists --name ${{ env.AZURE_GROUP_NAME }} --debug)
           if [[ "$RESOURCE_GROUP" == "false" ]]; then
             echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
-            az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+            az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }} --debug
           else
             echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
           fi
 
-      # Step 7: Check if container app environment exists and create if needed
+      # Step 8: Check if container app environment exists and create if needed
       - name: Check if container app environment exists and create if needed
         run: |
-          ENVIRONMENT_EXISTS=$(az containerapp env list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='agent-environment'].name" -o tsv)
+          echo "Checking if container app environment exists..."
+          ENVIRONMENT_EXISTS=$(az containerapp env list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='agent-environment'].name" -o tsv --debug)
           if [[ -z "$ENVIRONMENT_EXISTS" ]]; then
             echo "Creating container app environment: agent-environment"
-            az containerapp env create --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+            az containerapp env create --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }} --debug
           else
             echo "Container app environment already exists"
           fi
 
-      # Step 8: Deploy or update the container app
-      - name: Deploy to containerapp
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            set -e # Exit on first error
-            az config set extension.use_dynamic_install=yes_without_prompt
-
-            # Authenticate with GitHub container registry
-            az containerapp registry set -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --server ghcr.io --username ${{ github.actor }} --password ${{ secrets.GHCR_TOKEN }}
-            
-            # Create or update the container app
-            if ! az containerapp up \
+      # Step 9: Check if container app exists, create or update accordingly
+      - name: Check if container app exists and create or update
+        run: |
+          echo "Checking if container app exists..."
+          CONTAINER_APP_EXISTS=$(az containerapp list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='${{ env.AZURE_CONTAINER_APP_NAME }}'].name" -o tsv --debug)
+          
+          if [[ -z "$CONTAINER_APP_EXISTS" ]]; then
+            echo "Creating container app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+            az containerapp create \
               --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ env.AZURE_GROUP_NAME }} \
               --image ${{ env.IMAGE_NAME }} \
               --environment agent-environment \
               --cpu 2 --memory 4Gi \
-              --env-vars AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=https://aiocean.openai.azure.com/ OPENAI_API_VERSION="2024-08-01-preview"; then
-                echo "Container app deployment failed!"
-                exit 1
-            fi
-            
-            # Optionally, update the resource limits if needed
-            az containerapp update -n ${{ env.AZURE_CONTAINER_APP_NAME }} -g ${{ env.AZURE_GROUP_NAME }} --cpu 2 --memory 4Gi
+              --env-vars AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=https://aiocean.openai.azure.com/ OPENAI_API_VERSION="2024-08-01-preview" \
+              --debug
+          else
+            echo "Updating container app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+            az containerapp update \
+              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+              --resource-group ${{ env.AZURE_GROUP_NAME }} \
+              --image ${{ env.IMAGE_NAME }} \
+              --environment agent-environment \
+              --cpu 2 --memory 4Gi \
+              --env-vars AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=https://aiocean.openai.azure.com/ OPENAI_API_VERSION="2024-08-01-preview" \
+              --debug
+          fi
