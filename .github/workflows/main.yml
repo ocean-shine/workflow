@@ -55,10 +55,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 6: Install the Azure CLI Configuration Extension
-      - name: Install azure-cli-configuration extension
-        run: |
-          az extension add --name azure-cli-configuration
+
 
       # Step 7: Check if resource group exists and create if needed
       - name: Check if resource group exists and create if needed
