@@ -7,9 +7,7 @@ fastapi
 uvicorn[standard]
 tiktoken
 sentence_transformers
-volcenginesdkarkruntime
 pandas 
 fastapi 
-pydantic 
 faiss-cpu 
 numpy 
