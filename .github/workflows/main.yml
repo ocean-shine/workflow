@@ -44,12 +44,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 4: Check if Dockerfile or requirements.txt has been modified
-      - name: Check if Dockerfile or requirements.txt has been modified
-        id: check_dockerfile_requirements
+      # Step 4: Check if Dockerfile, requirements.txt, or .github/workflows/main.yml has been modified
+      - name: Check if Dockerfile, requirements.txt, or .github/workflows/main.yml has been modified
+        id: check_dockerfile_requirements_workflow
         run: |
-          # Check if Dockerfile has been modified
-          git diff --exit-code --quiet Dockerfile
+          # Check if Dockerfile has been modified in the last commit
+          git diff --exit-code --quiet HEAD~1 HEAD Dockerfile
           if [ $? -eq 0 ]; then
             echo "Dockerfile has not been modified."
             echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
@@ -58,14 +58,24 @@ jobs:
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
           fi
       
-          # Check if requirements.txt has been modified
-          git diff --exit-code --quiet requirements.txt
+          # Check if requirements.txt has been modified in the last commit
+          git diff --exit-code --quiet HEAD~1 HEAD requirements.txt
           if [ $? -eq 0 ]; then
             echo "requirements.txt has not been modified."
             echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
           else
             echo "requirements.txt has been modified."
             echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
+          fi
+      
+          # Check if .github/workflows/main.yml has been modified in the last commit
+          git diff --exit-code --quiet HEAD~1 HEAD .github/workflows/main.yml
+          if [ $? -eq 0 ]; then
+            echo ".github/workflows/main.yml has not been modified."
+            echo "WORKFLOW_MODIFIED=false" >> $GITHUB_ENV
+          else
+            echo ".github/workflows/main.yml has been modified."
+            echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
           fi
         shell: bash
         env:
@@ -94,22 +104,32 @@ jobs:
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
           fi
       
-      # Step 6: Docker build if Dockerfile or requirements.txt is modified
-      - name: Build Docker image if modified
-        if: ${{ env.DOCKERFILE_MODIFIED == 'true' || env.REQUIREMENTS_MODIFIED == 'true' }}
+      # Step 6: Build Docker image if necessary
+      - name: Build Docker image if necessary
+        id: docker_build
         run: |
-          echo "Dockerfile or requirements.txt modified, rebuilding the Docker image..."
-          docker build -t ${{ env.IMAGE_NAME }} .
-          docker push ${{ env.IMAGE_NAME }}
+          if [ "${{ env.DOCKERFILE_MODIFIED }}" == "true" ] || [ "${{ env.REQUIREMENTS_MODIFIED }}" == "true" ] || [ "${{ env.WORKFLOW_MODIFIED }}" == "true" ]; then
+            echo "Building Docker image..."
+            docker build -t ${{ env.IMAGE_NAME }} .
+            echo "Docker image built."
+          else
+            echo "No changes detected. Skipping Docker build."
+          fi
       
+      # Step 7: Push Docker image to GHCR
+      - name: Push Docker image to GHCR
+        run: |
+          echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ${{ env.IMAGE_NAME }}
 
-      # Step 7: Azure Login (Use Azure service principal credentials)
+
+      # Step 8: Azure Login (Use Azure service principal credentials)
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Step 8: Authenticate with GitHub Container Registry in Azure
+      # Step 9: Authenticate with GitHub Container Registry in Azure
       - name: Authenticate Azure Container App with GHCR
         run: |
           echo "Authenticating with GitHub Container Registry..."
@@ -121,7 +141,7 @@ jobs:
             --password ${{ secrets.GHCR_TOKEN }} \
             --debug
 
-      # Step 9: Check if resource group exists and create if needed
+      # Step 10: Check if resource group exists and create if needed
       - name: Check if resource group exists and create if needed
         run: |
           echo "Checking if resource group exists..."
@@ -133,7 +153,7 @@ jobs:
             echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
           fi
 
-      # Step 10: Check if container app environment exists and create if needed
+      # Step 11: Check if container app environment exists and create if needed
       - name: Check if container app environment exists and create if needed
         run: |
           echo "Checking if container app environment exists..."
@@ -145,7 +165,7 @@ jobs:
             echo "Container app environment already exists"
           fi
 
-      # Step 11: Check if container app exists, create or update accordingly
+      # Step 12: Check if container app exists, create or update accordingly
       - name: Check if container app exists and create or update
         run: |
           echo "Checking if container app exists..."
