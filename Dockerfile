@@ -5,7 +5,8 @@ WORKDIR /webapp
 
 # 复制并安装依赖
 COPY ./requirements.txt /webapp/requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install --upgrade -r requirements.txt
+
 
 # 复制项目代码
 COPY . /webapp
