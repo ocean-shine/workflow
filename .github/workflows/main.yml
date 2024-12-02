@@ -49,7 +49,7 @@ jobs:
         id: check_dockerfile_requirements_workflow
         run: |
           # Check if Dockerfile has been modified in the last commit
-          git diff --exit-code --quiet HEAD Dockerfile
+          git diff --exit-code --quiet HEAD~1 HEAD -- Dockerfile
           if [ $? -eq 0 ]; then
             echo "Dockerfile has not been modified."
             echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
@@ -59,7 +59,7 @@ jobs:
           fi
       
           # Check if requirements.txt has been modified in the last commit
-          git diff --exit-code --quiet HEAD requirements.txt
+          git diff --exit-code --quiet HEAD~1 HEAD -- requirements.txt
           if [ $? -eq 0 ]; then
             echo "requirements.txt has not been modified."
             echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
@@ -69,7 +69,7 @@ jobs:
           fi
       
           # Check if .github/workflows/main.yml has been modified in the last commit
-          git diff --exit-code --quiet HEAD .github/workflows/main.yml
+          git diff --exit-code --quiet HEAD~1 HEAD -- .github/workflows/main.yml
           if [ $? -eq 0 ]; then
             echo ".github/workflows/main.yml has not been modified."
             echo "WORKFLOW_MODIFIED=false" >> $GITHUB_ENV
@@ -87,6 +87,7 @@ jobs:
           OPENAI_API_BASE: ${{ env.OPENAI_API_BASE }}
           OPENAI_API_VERSION: ${{ env.OPENAI_API_VERSION }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+  
 
       
       # Step 5: Check if Docker image exists on GHCR
