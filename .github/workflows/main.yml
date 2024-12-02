@@ -19,13 +19,13 @@ jobs:
     steps:
       # Step 1: Checkout repository
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       # Step 2: Set up Python 3.10 (using actions/setup-python@v2)
-      - name: Set up Python 3.10
+      - name: Set up Python 3.10.15
         uses: actions/setup-python@v2  # 使用 v2 版本以避免错误
         with:
-          python-version: 3.10  # 指定使用 Python 3.10
+          python-version: 3.10.15  # 指定使用 Python 3.10
           check-latest: false
           update-environment: true
           allow-prereleases: false
