@@ -9,6 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+  DOCKER_BUILD_REQUIRED: true  # 默认为 true，表示每次都需要构建 Docker 镜像
 
 on:
   workflow_dispatch:  # 手动触发工作流
@@ -44,64 +45,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-    
-     
-      
-
-      # Step4 to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
-      - name: Check for file changes
-        run: |
-          # 获取当前分支的最新提交 SHA
-          CURRENT_COMMIT=$(git rev-parse main)
-          
-          # 确保更新并拉取最新的提交记录
-          git fetch origin main
-      
-          # 检查 Dockerfile 是否有修改
-          git diff --exit-code --quiet origin/main -- Dockerfile
-          if [ $? -eq 0 ]; then
-            echo "Dockerfile has not been modified."
-            echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
-          else
-            echo "Dockerfile has been modified."
-            echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
-          fi
-      
-          # 检查 requirements.txt 是否有修改
-          git diff --exit-code --quiet origin/main -- requirements.txt
-          if [ $? -eq 0 ]; then
-            echo "requirements.txt has not been modified."
-            echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
-          else
-            echo "requirements.txt has been modified."
-            echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
-          fi
-      
-          # 检查 .github/workflows/main.yml 是否有修改
-          git diff --exit-code --quiet origin/main -- .github/workflows/main.yml
-          if [ $? -eq 0 ]; then
-            echo ".github/workflows/main.yml has not been modified."
-            echo "WORKFLOW_MODIFIED=false" >> $GITHUB_ENV
-          else
-            echo ".github/workflows/main.yml has been modified."
-            echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
-          fi
-        shell: bash  # 确保使用 bash 以保持兼容性
-        env:
-          AZURE_CONTAINER_APP_NAME: workflow
-          AZURE_GROUP_NAME: workflow-resource-group
-          AZURE_REGION: eastus
-          IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_BASE: https://aiocean.openai.azure.com/
-          OPENAI_API_VERSION: 2024-08-01-preview
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          pythonLocation: /opt/hostedtoolcache/Python/3.10.15/x64
-          LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.15/x64/lib
-      
-              
-
-      
       # Step 5: Check if Docker image exists on GHCR
       - name: Check if Docker image exists
         id: check_image
@@ -117,25 +60,24 @@ jobs:
             echo "Failed to check image existence. HTTP status: $IMAGE_EXISTS"
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
           fi
-      
+
       # Step 6: Build Docker image if necessary
       - name: Build Docker image if necessary
         id: docker_build
         run: |
-          if [ "${{ env.DOCKERFILE_MODIFIED }}" == "true" ] || [ "${{ env.REQUIREMENTS_MODIFIED }}" == "true" ] || [ "${{ env.WORKFLOW_MODIFIED }}" == "true" ]; then
+          if [ "${{ env.DOCKER_BUILD_REQUIRED }}" == "true" ]; then
             echo "Building Docker image..."
             docker build -t ${{ env.IMAGE_NAME }} .
             echo "Docker image built."
           else
-            echo "No changes detected. Skipping Docker build."
+            echo "No changes detected and DOCKER_BUILD_REQUIRED is false. Skipping Docker build."
           fi
-      
+
       # Step 7: Push Docker image to GHCR
       - name: Push Docker image to GHCR
         run: |
           echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push ${{ env.IMAGE_NAME }}
-
 
       # Step 8: Azure Login (Use Azure service principal credentials)
       - name: Azure Login
