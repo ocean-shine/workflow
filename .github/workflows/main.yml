@@ -47,20 +47,18 @@ jobs:
     
      
       
+
       # Step4 to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
       - name: Check for file changes
         run: |
-          # Get the current commit SHA
-          CURRENT_COMMIT=$(git rev-parse HEAD)
-          # Get the previous commit SHA (if it exists)
-          PREVIOUS_COMMIT=$(git rev-parse HEAD^1 || echo "no-previous-commit")
-    
-          # Check if Dockerfile has been modified
-          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
-            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- Dockerfile
-          else
-            git diff --exit-code --quiet -- Dockerfile
-          fi
+          # 获取当前分支的最新提交 SHA
+          CURRENT_COMMIT=$(git rev-parse main)
+          
+          # 确保更新并拉取最新的提交记录
+          git fetch origin main
+      
+          # 检查 Dockerfile 是否有修改
+          git diff --exit-code --quiet origin/main -- Dockerfile
           if [ $? -eq 0 ]; then
             echo "Dockerfile has not been modified."
             echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
@@ -68,13 +66,9 @@ jobs:
             echo "Dockerfile has been modified."
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
           fi
-    
-          # Check if requirements.txt has been modified
-          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
-            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- requirements.txt
-          else
-            git diff --exit-code --quiet -- requirements.txt
-          fi
+      
+          # 检查 requirements.txt 是否有修改
+          git diff --exit-code --quiet origin/main -- requirements.txt
           if [ $? -eq 0 ]; then
             echo "requirements.txt has not been modified."
             echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
@@ -82,13 +76,9 @@ jobs:
             echo "requirements.txt has been modified."
             echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
           fi
-    
-          # Check if .github/workflows/main.yml has been modified
-          if [ "$PREVIOUS_COMMIT" != "no-previous-commit" ]; then
-            git diff --exit-code --quiet $PREVIOUS_COMMIT $CURRENT_COMMIT -- .github/workflows/main.yml
-          else
-            git diff --exit-code --quiet -- .github/workflows/main.yml
-          fi
+      
+          # 检查 .github/workflows/main.yml 是否有修改
+          git diff --exit-code --quiet origin/main -- .github/workflows/main.yml
           if [ $? -eq 0 ]; then
             echo ".github/workflows/main.yml has not been modified."
             echo "WORKFLOW_MODIFIED=false" >> $GITHUB_ENV
@@ -96,7 +86,7 @@ jobs:
             echo ".github/workflows/main.yml has been modified."
             echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
           fi
-        shell: bash  # Ensure to use bash for compatibility
+        shell: bash  # 确保使用 bash 以保持兼容性
         env:
           AZURE_CONTAINER_APP_NAME: workflow
           AZURE_GROUP_NAME: workflow-resource-group
@@ -108,8 +98,8 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           pythonLocation: /opt/hostedtoolcache/Python/3.10.15/x64
           LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.15/x64/lib
-    
-        
+      
+              
 
       
       # Step 5: Check if Docker image exists on GHCR
