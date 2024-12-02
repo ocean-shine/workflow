@@ -44,16 +44,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 4: Check if Dockerfile, requirements.txt, or .github/workflows/main.yml has been modified
-      - name: Check if Dockerfile, requirements.txt, or .github/workflows/main.yml has been modified
-        id: check_dockerfile_requirements_workflow
+    
+      # Step to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
+      - name: Check for file changes
         run: |
-          # Check if Dockerfile has been modified
+          # Check if HEAD exists (not the first commit)
           if git rev-parse --verify HEAD &>/dev/null; then
-            # If HEAD exists (not the first commit), compare with previous commit (HEAD~1)
+            # Not the first commit, compare with the previous commit (HEAD~1)
             git diff --exit-code --quiet HEAD~1 HEAD -- Dockerfile
           else
-            # If it's the first commit, compare with empty commit (no history)
+            # First commit, compare with no history (empty commit)
             git diff --exit-code --quiet -- Dockerfile
           fi
           if [ $? -eq 0 ]; then
@@ -63,7 +63,7 @@ jobs:
             echo "Dockerfile has been modified."
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
           fi
-      
+    
           # Check if requirements.txt has been modified
           if git rev-parse --verify HEAD &>/dev/null; then
             git diff --exit-code --quiet HEAD~1 HEAD -- requirements.txt
@@ -77,7 +77,7 @@ jobs:
             echo "requirements.txt has been modified."
             echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
           fi
-      
+    
           # Check if .github/workflows/main.yml has been modified
           if git rev-parse --verify HEAD &>/dev/null; then
             git diff --exit-code --quiet HEAD~1 HEAD -- .github/workflows/main.yml
@@ -91,17 +91,20 @@ jobs:
             echo ".github/workflows/main.yml has been modified."
             echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
           fi
-        shell: bash
+        shell: /usr/bin/bash --noprofile --norc -e -o pipefail
         env:
-          AZURE_CONTAINER_APP_NAME: ${{ env.AZURE_CONTAINER_APP_NAME }}
-          AZURE_GROUP_NAME: ${{ env.AZURE_GROUP_NAME }}
-          AZURE_REGION: ${{ env.AZURE_REGION }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-          OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-          OPENAI_API_BASE: ${{ env.OPENAI_API_BASE }}
-          OPENAI_API_VERSION: ${{ env.OPENAI_API_VERSION }}
+          AZURE_CONTAINER_APP_NAME: workflow
+          AZURE_GROUP_NAME: workflow-resource-group
+          AZURE_REGION: eastus
+          IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_API_BASE: https://aiocean.openai.azure.com/
+          OPENAI_API_VERSION: 2024-08-01-preview
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-
+          pythonLocation: /opt/hostedtoolcache/Python/3.10.15/x64
+          LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.15/x64/lib
+    
+    
 
       
       # Step 5: Check if Docker image exists on GHCR
