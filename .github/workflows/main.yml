@@ -48,8 +48,14 @@ jobs:
       - name: Check if Dockerfile, requirements.txt, or .github/workflows/main.yml has been modified
         id: check_dockerfile_requirements_workflow
         run: |
-          # Check if Dockerfile has been modified in the last commit
-          git diff --exit-code --quiet HEAD~1 HEAD -- Dockerfile
+          # Check if Dockerfile has been modified
+          if git rev-parse --verify HEAD &>/dev/null; then
+            # If HEAD exists (not the first commit), compare with previous commit (HEAD~1)
+            git diff --exit-code --quiet HEAD~1 HEAD -- Dockerfile
+          else
+            # If it's the first commit, compare with empty commit (no history)
+            git diff --exit-code --quiet -- Dockerfile
+          fi
           if [ $? -eq 0 ]; then
             echo "Dockerfile has not been modified."
             echo "DOCKERFILE_MODIFIED=false" >> $GITHUB_ENV
@@ -58,8 +64,12 @@ jobs:
             echo "DOCKERFILE_MODIFIED=true" >> $GITHUB_ENV
           fi
       
-          # Check if requirements.txt has been modified in the last commit
-          git diff --exit-code --quiet HEAD~1 HEAD -- requirements.txt
+          # Check if requirements.txt has been modified
+          if git rev-parse --verify HEAD &>/dev/null; then
+            git diff --exit-code --quiet HEAD~1 HEAD -- requirements.txt
+          else
+            git diff --exit-code --quiet -- requirements.txt
+          fi
           if [ $? -eq 0 ]; then
             echo "requirements.txt has not been modified."
             echo "REQUIREMENTS_MODIFIED=false" >> $GITHUB_ENV
@@ -68,8 +78,12 @@ jobs:
             echo "REQUIREMENTS_MODIFIED=true" >> $GITHUB_ENV
           fi
       
-          # Check if .github/workflows/main.yml has been modified in the last commit
-          git diff --exit-code --quiet HEAD~1 HEAD -- .github/workflows/main.yml
+          # Check if .github/workflows/main.yml has been modified
+          if git rev-parse --verify HEAD &>/dev/null; then
+            git diff --exit-code --quiet HEAD~1 HEAD -- .github/workflows/main.yml
+          else
+            git diff --exit-code --quiet -- .github/workflows/main.yml
+          fi
           if [ $? -eq 0 ]; then
             echo ".github/workflows/main.yml has not been modified."
             echo "WORKFLOW_MODIFIED=false" >> $GITHUB_ENV
@@ -87,7 +101,7 @@ jobs:
           OPENAI_API_BASE: ${{ env.OPENAI_API_BASE }}
           OPENAI_API_VERSION: ${{ env.OPENAI_API_VERSION }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  
+
 
       
       # Step 5: Check if Docker image exists on GHCR
