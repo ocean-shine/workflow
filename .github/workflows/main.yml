@@ -45,7 +45,8 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
     
-      # Step to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
+     
+      # Step 4 to check if Dockerfile, requirements.txt, or .github/workflows/main.yml were modified
       - name: Check for file changes
         run: |
           # Check if HEAD exists (not the first commit)
@@ -91,7 +92,7 @@ jobs:
             echo ".github/workflows/main.yml has been modified."
             echo "WORKFLOW_MODIFIED=true" >> $GITHUB_ENV
           fi
-        shell: /usr/bin/bash --noprofile --norc -e -o pipefail
+        shell: bash  # Make sure to specify a valid shell
         env:
           AZURE_CONTAINER_APP_NAME: workflow
           AZURE_GROUP_NAME: workflow-resource-group
@@ -103,6 +104,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           pythonLocation: /opt/hostedtoolcache/Python/3.10.15/x64
           LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.15/x64/lib
+
     
     
 
