@@ -26,26 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Python 3.10 (using actions/setup-python@v2)
-      - name: Set up Python 3.10.15
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.10.15
-          check-latest: false
-          update-environment: true
-          allow-prereleases: false
-        env:
-          ACTIONS_STEP_DEBUG: true  # 启用调试日志，帮助调试问题
-
-      # Step 3: Login to GitHub Container Registry
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      # Step 5: Check if Docker image exists on GHCR
+      # Step 2: Check if Docker image exists on GHCR
       - name: Check if Docker image exists
         id: check_image
         run: |
@@ -61,7 +42,7 @@ jobs:
             echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
           fi
 
-      # Step 6: Build Docker image if necessary
+      # Step 3: Build Docker image if necessary
       - name: Build Docker image if necessary
         id: docker_build
         run: |
@@ -73,88 +54,79 @@ jobs:
             echo "No changes detected and DOCKER_BUILD_REQUIRED is false. Skipping Docker build."
           fi
 
-      # Step 7: Push Docker image to GHCR
+      # Step 4: Push Docker image to GHCR
       - name: Push Docker image to GHCR
         run: |
           echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push ${{ env.IMAGE_NAME }}
 
-      # Step 8: Azure Login (Use Azure service principal credentials)
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Step 9: Authenticate with GitHub Container Registry in Azure
-      - name: Authenticate Azure Container App with GHCR
+      # Step 5: Build and Run az CLI Docker Image
+      - name: Build and Run az CLI Docker Image
         run: |
-          echo "Authenticating with GitHub Container Registry..."
-          az containerapp registry set \
-            --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-            --resource-group ${{ env.AZURE_GROUP_NAME }} \
-            --server ghcr.io \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GHCR_TOKEN }} \
-            --debug
+          # 使用官方 Azure CLI 镜像作为基础镜像，构建自定义镜像
+          echo "Building Docker image with Azure CLI..."
+          cat <<EOF > Dockerfile
+          FROM mcr.microsoft.com/azure-cli:latest
+          RUN apt-get update && apt-get install -y curl jq python3-pip
+          RUN pip install --no-cache-dir --upgrade openai
+          EOF
+          docker build -t az-cli-container .
 
-      # Step 10: Check if resource group exists and create if needed
-      - name: Check if resource group exists and create if needed
+      # Step 6: Execute all commands inside the Docker container
+      - name: Deploy and Manage Resources in Docker
         run: |
-          echo "Checking if resource group exists..."
-          RESOURCE_GROUP=$(az group exists --name ${{ env.AZURE_GROUP_NAME }} --debug)
-          if [[ "$RESOURCE_GROUP" == "false" ]]; then
-            echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
-            az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }} --debug
-          else
-            echo "Resource group ${{ env.AZURE_GROUP_NAME }} already exists"
-          fi
+          docker run --rm \
+            -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
+            -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
+            -e AZURE_REGION=${{ env.AZURE_REGION }} \
+            -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
+            -e OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} \
+            -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
+            -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
+            az-cli-container /bin/bash -c "
+              echo 'Authenticating with Azure...'
+              az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
 
-      # Step 11: Check if container app environment exists and create if needed
-      - name: Check if container app environment exists and create if needed
-        run: |
-          echo "Checking if container app environment exists..."
-          ENVIRONMENT_EXISTS=$(az containerapp env list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='agent-environment'].name" -o tsv --debug)
-          if [[ -z "$ENVIRONMENT_EXISTS" ]]; then
-            echo "Creating container app environment: agent-environment"
-            az containerapp env create --name agent-environment --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }} --debug
-          else
-            echo "Container app environment already exists"
-          fi
+              echo 'Checking if resource group exists...'
+              RESOURCE_GROUP=\$(az group exists --name $AZURE_GROUP_NAME)
+              if [[ \"\$RESOURCE_GROUP\" == \"false\" ]]; then
+                az group create --name $AZURE_GROUP_NAME --location $AZURE_REGION
+              fi
 
-      # Step 12: Check if container app exists, create or update accordingly
-      - name: Check if container app exists and create or update
-        run: |
-          echo "Checking if container app exists..."
-          CONTAINER_APP_EXISTS=$(az containerapp list --resource-group ${{ env.AZURE_GROUP_NAME }} --query "[?name=='${{ env.AZURE_CONTAINER_APP_NAME }}'].name" -o tsv --debug)
-          
-          if [[ -z "$CONTAINER_APP_EXISTS" ]]; then
-            echo "Creating container app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
-            az containerapp create \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_GROUP_NAME }} \
-              --image ${{ env.IMAGE_NAME }} \
-              --environment agent-environment \
-              --cpu 2.0 --memory 4Gi \
-              --env-vars AZURE_OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
-              --tags "environment=production" \
-              --registry-server ghcr.io \
-              --registry-username ${{ github.actor }} \
-              --registry-password ${{ secrets.GHCR_TOKEN }} \
-              --ingress external \
-              --target-port 80 \
-              --scale-rule-name "http-scaling-rule" \
-              --scale-rule-http-concurrency 50 \
-              --min-replicas 1 \
-              --max-replicas 3 \
-              --revision-suffix "v1" \
-              --workload-profile-name Consumption \
-              --debug
-          else
-            echo "Updating container app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
-            az containerapp update \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_GROUP_NAME }} \
-              --image ${{ env.IMAGE_NAME }} \
-              --tags "environment=production" \
-              --debug
-          fi
+              echo 'Checking if container app environment exists...'
+              ENVIRONMENT_EXISTS=\$(az containerapp env list --resource-group $AZURE_GROUP_NAME --query \"[?name=='agent-environment'].name\" -o tsv)
+              if [[ -z \"\$ENVIRONMENT_EXISTS\" ]]; then
+                az containerapp env create --name agent-environment --resource-group $AZURE_GROUP_NAME --location $AZURE_REGION
+              fi
+
+              echo 'Checking if container app exists...'
+              CONTAINER_APP_EXISTS=\$(az containerapp list --resource-group $AZURE_GROUP_NAME --query \"[?name=='$AZURE_CONTAINER_APP_NAME'].name\" -o tsv)
+              if [[ -z \"\$CONTAINER_APP_EXISTS\" ]]; then
+                az containerapp create \
+                  --name $AZURE_CONTAINER_APP_NAME \
+                  --resource-group $AZURE_GROUP_NAME \
+                  --image $IMAGE_NAME \
+                  --environment agent-environment \
+                  --cpu 2.0 --memory 4Gi \
+                  --env-vars AZURE_OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
+                  --tags \"environment=production\" \
+                  --registry-server ghcr.io \
+                  --registry-username ${{ github.actor }} \
+                  --registry-password $GHCR_TOKEN \
+                  --ingress external \
+                  --target-port 80 \
+                  --scale-rule-name \"http-scaling-rule\" \
+                  --scale-rule-http-concurrency 50 \
+                  --min-replicas 1 \
+                  --max-replicas 3 \
+                  --revision-suffix \"v1\" \
+                  --workload-profile-name Consumption
+              else
+                az containerapp update \
+                  --name $AZURE_CONTAINER_APP_NAME \
+                  --resource-group $AZURE_GROUP_NAME \
+                  --image $IMAGE_NAME \
+                  --tags \"environment=production\"
+              fi
+            "
