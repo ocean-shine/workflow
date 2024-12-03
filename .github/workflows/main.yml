@@ -49,7 +49,8 @@ jobs:
       # Step 5: 使用 Docker 部署到 Azure
       - name: Deploy to Azure
         run: |
-          docker run --rm \
+          # Check if the container app already exists
+          CONTAINER_APP_EXISTS=$(docker run --rm \
             -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
             -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
             -e AZURE_REGION=${{ env.AZURE_REGION }} \
@@ -63,14 +64,61 @@ jobs:
                 -p ${{ secrets.AZURE_CLIENT_SECRET }} \
                 --tenant ${{ secrets.AZURE_TENANT_ID }}
 
-              az containerapp create \
-                --name $AZURE_CONTAINER_APP_NAME \
-                --resource-group $AZURE_GROUP_NAME \
-                --image $IMAGE_NAME \
-                --cpu 1 \
-                --memory 2Gi \
-                --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
-                --ingress external \
-                --target-port 8080 \
-                --tags environment=production
-            "
+              az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query 'name' -o tsv
+            ")
+
+          if [ "$CONTAINER_APP_EXISTS" == "$AZURE_CONTAINER_APP_NAME" ]; then
+            echo "Container app '$AZURE_CONTAINER_APP_NAME' already exists. Updating the app..."
+            docker run --rm \
+              -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
+              -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
+              -e AZURE_REGION=${{ env.AZURE_REGION }} \
+              -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
+              -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+              -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
+              -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+              mcr.microsoft.com/azure-cli:latest bash -c "
+                az login --service-principal \
+                  -u ${{ secrets.AZURE_CLIENT_ID }} \
+                  -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+                  --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+                az containerapp update \
+                  --name $AZURE_CONTAINER_APP_NAME \
+                  --resource-group $AZURE_GROUP_NAME \
+                  --image $IMAGE_NAME \
+                  --cpu 1 \
+                  --memory 2Gi \
+                  --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
+                  --ingress external \
+                  --target-port 8080 \  # 使用8080端口
+                  --tags environment=production
+              "
+          else
+            echo "Container app '$AZURE_CONTAINER_APP_NAME' does not exist. Creating the app..."
+            docker run --rm \
+              -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
+              -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
+              -e AZURE_REGION=${{ env.AZURE_REGION }} \
+              -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
+              -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+              -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
+              -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+              mcr.microsoft.com/azure-cli:latest bash -c "
+                az login --service-principal \
+                  -u ${{ secrets.AZURE_CLIENT_ID }} \
+                  -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+                  --tenant ${{ secrets.AZURE_TENANT_ID }}
+
+                az containerapp create \
+                  --name $AZURE_CONTAINER_APP_NAME \
+                  --resource-group $AZURE_GROUP_NAME \
+                  --image $IMAGE_NAME \
+                  --cpu 1 \
+                  --memory 2Gi \
+                  --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
+                  --ingress external \
+                  --target-port 8080 \  # 使用8080端口
+                  --tags environment=production
+              "
+          fi
