@@ -1,4 +1,4 @@
-name: CI/CD Pipeline v1
+name: CI/CD Pipeline v2
 
 env:
   AZURE_CONTAINER_APP_NAME: workflow
