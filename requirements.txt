@@ -1,5 +1,6 @@
 azure-identity
 langchain
+langchain-community
 azure-search-documents
 openai
 python-dotenv
