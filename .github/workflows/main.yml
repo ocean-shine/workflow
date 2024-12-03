@@ -63,7 +63,7 @@ jobs:
                 -u ${{ secrets.AZURE_CLIENT_ID }} \
                 -p ${{ secrets.AZURE_CLIENT_SECRET }} \
                 --tenant ${{ secrets.AZURE_TENANT_ID }}
-
+              
               az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query 'name' -o tsv
             ")
 
@@ -91,8 +91,7 @@ jobs:
                   --memory 2Gi \
                   --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
                   --ingress external \
-                  --target-port 8080 \  # 使用8080端口
-                  --tags environment=production
+                  --target-port 8080
               "
           else
             echo "Container app '$AZURE_CONTAINER_APP_NAME' does not exist. Creating the app..."
@@ -118,7 +117,6 @@ jobs:
                   --memory 2Gi \
                   --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
                   --ingress external \
-                  --target-port 8080 \  # 使用8080端口
-                  --tags environment=production
+                  --target-port 8080
               "
           fi
