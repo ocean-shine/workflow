@@ -54,6 +54,9 @@ jobs:
             -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
             -e AZURE_REGION=${{ env.AZURE_REGION }} \
             -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
+            -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+            -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
+            -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             mcr.microsoft.com/azure-cli:latest bash -c "
               az login --service-principal \
                 -u ${{ secrets.AZURE_CLIENT_ID }} \
