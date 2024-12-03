@@ -1,4 +1,4 @@
-name: Auto Deployment with Azure Service Principal
+name: CI/CD Pipeline
 
 env:
   AZURE_CONTAINER_APP_NAME: workflow
@@ -9,124 +9,65 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: true  # 默认为 true，表示每次都需要构建 Docker 镜像
+  DOCKER_BUILD_REQUIRED: true
 
 on:
-  workflow_dispatch:  # 手动触发工作流
+  push:
+    branches:
+      - main
 
 permissions:
-  id-token: write  # 明确授予访问 ID Token 的权限
+  id-token: write
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # Step 1: 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Check if Docker image exists on GHCR
-      - name: Check if Docker image exists
-        id: check_image
-        run: |
-          IMAGE_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" https://ghcr.io/v2/${{ github.repository_owner }}/workflow/manifests/latest)
-          if [ "$IMAGE_EXISTS" -eq "200" ]; then
-            echo "Image exists on GHCR."
-            echo "IMAGE_EXISTS=true" >> $GITHUB_ENV
-          elif [ "$IMAGE_EXISTS" -eq "404" ]; then
-            echo "Image does not exist on GHCR."
-            echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
-          else
-            echo "Failed to check image existence. HTTP status: $IMAGE_EXISTS"
-            echo "IMAGE_EXISTS=false" >> $GITHUB_ENV
-          fi
+      # Step 2: 登录 GHCR
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 3: Build Docker image if necessary
-      - name: Build Docker image if necessary
-        id: docker_build
+      # Step 3: 构建 Docker 镜像
+      - name: Build Docker Image
         run: |
-          if [ "${{ env.DOCKER_BUILD_REQUIRED }}" == "true" ]; then
-            echo "Building Docker image..."
-            docker build -t ${{ env.IMAGE_NAME }} .
-            echo "Docker image built."
-          else
-            echo "No changes detected and DOCKER_BUILD_REQUIRED is false. Skipping Docker build."
-          fi
+          docker build -t ${{ env.IMAGE_NAME }} .
 
-      # Step 4: Push Docker image to GHCR
-      - name: Push Docker image to GHCR
+      # Step 4: 推送 Docker 镜像到 GHCR
+      - name: Push Docker Image to GHCR
         run: |
-          echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker push ${{ env.IMAGE_NAME }}
 
-      # Step 5: Build and Run az CLI Docker Image
-      - name: Build and Run az CLI Docker Image
-        run: |
-          # 使用官方 Azure CLI 镜像作为基础镜像，构建自定义镜像
-          echo "Building Docker image with Azure CLI..."
-          cat <<EOF > Dockerfile
-          FROM mcr.microsoft.com/azure-cli:latest
-          RUN apt-get update && apt-get install -y curl jq python3-pip
-          RUN pip install --no-cache-dir --upgrade openai
-          EOF
-          docker build -t az-cli-container .
-
-      # Step 6: Execute all commands inside the Docker container
-      - name: Deploy and Manage Resources in Docker
+      # Step 5: 使用 Docker 部署到 Azure
+      - name: Deploy to Azure
         run: |
           docker run --rm \
             -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
             -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
             -e AZURE_REGION=${{ env.AZURE_REGION }} \
             -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
-            -e OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} \
-            -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
-            -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
-            -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
-            az-cli-container /bin/bash -c "
-              echo 'Authenticating with Azure...'
-              az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+            mcr.microsoft.com/azure-cli:latest bash -c "
+              az login --service-principal \
+                -u ${{ secrets.AZURE_CLIENT_ID }} \
+                -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+                --tenant ${{ secrets.AZURE_TENANT_ID }}
 
-              echo 'Checking if resource group exists...'
-              RESOURCE_GROUP=\$(az group exists --name $AZURE_GROUP_NAME)
-              if [[ \"\$RESOURCE_GROUP\" == \"false\" ]]; then
-                az group create --name $AZURE_GROUP_NAME --location $AZURE_REGION
-              fi
-
-              echo 'Checking if container app environment exists...'
-              ENVIRONMENT_EXISTS=\$(az containerapp env list --resource-group $AZURE_GROUP_NAME --query \"[?name=='agent-environment'].name\" -o tsv)
-              if [[ -z \"\$ENVIRONMENT_EXISTS\" ]]; then
-                az containerapp env create --name agent-environment --resource-group $AZURE_GROUP_NAME --location $AZURE_REGION
-              fi
-
-              echo 'Checking if container app exists...'
-              CONTAINER_APP_EXISTS=\$(az containerapp list --resource-group $AZURE_GROUP_NAME --query \"[?name=='$AZURE_CONTAINER_APP_NAME'].name\" -o tsv)
-              if [[ -z \"\$CONTAINER_APP_EXISTS\" ]]; then
-                az containerapp create \
-                  --name $AZURE_CONTAINER_APP_NAME \
-                  --resource-group $AZURE_GROUP_NAME \
-                  --image $IMAGE_NAME \
-                  --environment agent-environment \
-                  --cpu 2.0 --memory 4Gi \
-                  --env-vars AZURE_OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
-                  --tags \"environment=production\" \
-                  --registry-server ghcr.io \
-                  --registry-username ${{ github.actor }} \
-                  --registry-password $GHCR_TOKEN \
-                  --ingress external \
-                  --target-port 80 \
-                  --scale-rule-name \"http-scaling-rule\" \
-                  --scale-rule-http-concurrency 50 \
-                  --min-replicas 1 \
-                  --max-replicas 3 \
-                  --revision-suffix \"v1\" \
-                  --workload-profile-name Consumption
-              else
-                az containerapp update \
-                  --name $AZURE_CONTAINER_APP_NAME \
-                  --resource-group $AZURE_GROUP_NAME \
-                  --image $IMAGE_NAME \
-                  --tags \"environment=production\"
-              fi
+              az containerapp create \
+                --name $AZURE_CONTAINER_APP_NAME \
+                --resource-group $AZURE_GROUP_NAME \
+                --image $IMAGE_NAME \
+                --cpu 1 \
+                --memory 2Gi \
+                --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
+                --ingress external \
+                --target-port 8080 \
+                --tags environment=production
             "
