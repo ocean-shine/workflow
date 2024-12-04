@@ -63,9 +63,10 @@ jobs:
           az containerapp registry set \
             --name $AZURE_CONTAINER_APP_NAME \
             --resource-group $AZURE_GROUP_NAME \
-            --registry-login-server ghcr.io \
-            --registry-username ${{ github.actor }} \
-            --registry-password $GHCR_TOKEN
+            --server ghcr.io \
+            --username ${{ github.actor }} \
+            --password $GHCR_TOKEN
+
           echo "Registry credentials set successfully."
 
       # Step 6: 使用 Docker 部署到 Azure
