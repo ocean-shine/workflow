@@ -1,7 +1,5 @@
 name: CI/CD Pipeline v3
 
-
-
 on:
   push:
     branches:
@@ -51,7 +49,6 @@ jobs:
 
       - name: Deploy to Azure using ghcr.io/ocean-shine/workflow:latest
         run: |
-          # Run Azure deployment tasks in the container
           docker run \
             -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
             -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
@@ -65,93 +62,27 @@ jobs:
             -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
             -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
-            ghcr.io/ocean-shine/workflow:latest 
+            ghcr.io/ocean-shine/workflow:latest bash -c "
               echo 'Logging into Azure...'
-              az login --service-principal \
-                -u $AZURE_CLIENT_ID \
-                -p $AZURE_CLIENT_SECRET \
-                --tenant $AZURE_TENANT_ID
+              az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
               echo 'Azure login successful.'
 
-              # 检查资源组是否存在
-              echo 'Checking resource group...'
-              RESOURCE_GROUP_EXISTS=$(az group show --name $AZURE_GROUP_NAME --query 'name' -o tsv)
-              if [ -z "$RESOURCE_GROUP_EXISTS" ]; then
-                echo 'Creating resource group...'
+              # Resource group setup
+              RESOURCE_GROUP_EXISTS=\$(az group show --name $AZURE_GROUP_NAME --query 'name' -o tsv)
+              if [ -z \"\$RESOURCE_GROUP_EXISTS\" ]; then
                 az group create --name $AZURE_GROUP_NAME --location $AZURE_REGION
-                echo 'Resource group created successfully.'
-              else
-                echo 'Resource group already exists.'
               fi
 
-              # 检查容器应用环境是否存在
-              echo 'Checking container app environment...'
-              ENV_EXISTS=$(az containerapp env show --name $AZURE_CONTAINER_APP_ENV_NAME --resource-group $AZURE_GROUP_NAME --query 'name' -o tsv)
-              if [ -z "$ENV_EXISTS" ]; then
-                echo 'Creating container app environment...'
-                az containerapp env create --name $AZURE_CONTAINER_APP_ENV_NAME --resource-group $AZURE_GROUP_NAME --location $AZURE_REGION
-                echo 'Container app environment created successfully.'
-              else
-                echo 'Container app environment already exists.'
-              fi
-
-              # 检查容器应用是否存在
-              echo 'Checking container app...'
-              APP_EXISTS=$(az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query 'name' -o tsv)
-              if [ -z "$APP_EXISTS" ]; then
-                echo 'Creating container app...'
+              # Container app setup
+              APP_EXISTS=\$(az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query 'name' -o tsv)
+              if [ -z \"\$APP_EXISTS\" ]; then
                 az containerapp create \
                   --name $AZURE_CONTAINER_APP_NAME \
                   --resource-group $AZURE_GROUP_NAME \
                   --image $IMAGE_NAME \
-                  --cpu 1 \
-                  --memory 2Gi \
+                  --cpu 1 --memory 2Gi \
                   --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
-                  --ingress external \
-                  --target-port 8080 \
-                  --environment $AZURE_CONTAINER_APP_ENV_NAME
-                echo 'Container app created successfully.'
-              else
-                APP_STATUS=$(az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query 'properties.provisioningState' -o tsv)
-                if [ "$APP_STATUS" != "Succeeded" ]; then
-                  echo 'Container app is in failed state. Deleting and recreating...'
-                  az containerapp delete --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --yes
-                  az containerapp create \
-                    --name $AZURE_CONTAINER_APP_NAME \
-                    --resource-group $AZURE_GROUP_NAME \
-                    --image $IMAGE_NAME \
-                    --cpu 1 \
-                    --memory 2Gi \
-                    --env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
-                    --ingress external \
-                    --target-port 8080 \
-                    --environment $AZURE_CONTAINER_APP_ENV_NAME
-                  echo 'Container app recreated successfully.'
-                else
-                  echo 'Container app exists and is healthy. Skipping creation.'
-                fi
+                  --ingress external --target-port 8080 --environment $AZURE_CONTAINER_APP_ENV_NAME
               fi
-
-              # 设置容器注册表凭证
-              echo 'Setting registry credentials...'
-              az containerapp registry set \
-                --name $AZURE_CONTAINER_APP_NAME \
-                --resource-group $AZURE_GROUP_NAME \
-                --server ghcr.io \
-                --username $AZURE_CLIENT_ID \
-                --password $GHCR_TOKEN
-              echo 'Registry credentials set.'
-
-              # 更新容器应用
-              echo 'Updating container app...'
-              az containerapp update \
-                --name $AZURE_CONTAINER_APP_NAME \
-                --resource-group $AZURE_GROUP_NAME \
-                --image $IMAGE_NAME \
-                --cpu 1 \
-                --memory 2Gi \
-                --set-env-vars OPENAI_API_KEY=$OPENAI_API_KEY OPENAI_API_BASE=$OPENAI_API_BASE OPENAI_API_VERSION=$OPENAI_API_VERSION \
-                --revision-suffix v2
-              echo 'Container app updated.'
-            EOF
+            "
           echo "Azure deployment complete!"
