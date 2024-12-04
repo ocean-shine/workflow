@@ -19,8 +19,11 @@ WORKDIR /webapp
 COPY ./requirements.txt /webapp/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# 复制项目代码
+# 复制项目代码到容器
 COPY . /webapp
+
+# 确保 main.py 文件在 /webapp 目录
+RUN ls /webapp  # 检查是否成功复制了 main.py
 
 # 启动 FastAPI 应用
 ENTRYPOINT ["uvicorn"]
