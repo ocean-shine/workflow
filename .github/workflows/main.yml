@@ -105,13 +105,19 @@ jobs:
             echo "Container app does not exist, skipping deletion."
           fi
 
-          # 创建容器应用
-          echo "Creating new Azure Container App: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+          # 打印环境变量以进行调试
+          echo "Checking environment variables..."
+          echo "OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}"
+          echo "OPENAI_API_BASE=${{ env.OPENAI_API_BASE }}"
+          echo "OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }}"
+
+          # 增加容器资源分配
+          echo "Creating new Azure Container App with increased resources..."
           az containerapp create \
             --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
             --resource-group ${{ env.AZURE_GROUP_NAME }} \
-            --cpu 1 --memory 2Gi \
-            --env-vars OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            --cpu 2 --memory 8Gi \
+            --env-vars OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
             --image ${{ env.IMAGE_NAME }} \
             --registry-server ghcr.io \
