@@ -61,7 +61,7 @@ jobs:
           echo "Azure login successful."
 
           # Check if the Resource Group exists, if it does, delete it first
-          RESOURCE_GROUP_EXISTS=$(az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          RESOURCE_GROUP_EXISTS=$(az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null)
           if [ -n "$RESOURCE_GROUP_EXISTS" ]; then
             echo "Resource Group exists. Deleting resource group: ${{ env.AZURE_GROUP_NAME }}"
             az group delete --name ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
@@ -69,7 +69,7 @@ jobs:
             
             # Wait for the resource group to be deleted (check every minute)
             echo "Waiting for the resource group to be deleted..."
-            until ! az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv; do
+            until ! az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Resource group still exists. Waiting for 1 minute..."
               sleep 60
             done
@@ -81,7 +81,7 @@ jobs:
           az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
 
           # Ensure the Environment exists, if it does, delete it first
-          ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null)
           if [ -n "$ENV_EXISTS" ]; then
             echo "Container App Environment exists. Deleting environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
             az containerapp env delete --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
@@ -89,7 +89,7 @@ jobs:
             
             # Wait for the environment to be deleted (check every minute)
             echo "Waiting for the environment to be deleted..."
-            until ! az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv; do
+            until ! az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Environment still exists. Waiting for 1 minute..."
               sleep 60
             done
@@ -101,7 +101,7 @@ jobs:
           az containerapp env create --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
 
           # Check if the Container App exists, if it does, delete it first
-          APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null)
           if [ -n "$APP_EXISTS" ]; then
             echo "Azure Container App exists. Deleting app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
             az containerapp delete --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
@@ -109,7 +109,7 @@ jobs:
             
             # Wait for the app to be deleted (check every minute)
             echo "Waiting for the Container App to be deleted..."
-            until ! az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv; do
+            until ! az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Container App still exists. Waiting for 1 minute..."
               sleep 60
             done
