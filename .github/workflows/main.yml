@@ -9,7 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: false
+  DOCKER_BUILD_REQUIRED: false  # 控制是否构建和推送 Docker 镜像
   AZURE_CONTAINER_APP_ENV_NAME: workflow-env  # 添加环境名称
 
 on:
@@ -40,15 +40,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 3: 构建 Docker 镜像
+      # Step 3: 构建 Docker 镜像 (只有在 DOCKER_BUILD_REQUIRED 为 true 时执行)
       - name: Build Docker Image
+        if: ${{ env.DOCKER_BUILD_REQUIRED == 'true' }}  # 仅在 DOCKER_BUILD_REQUIRED 为 true 时执行
         run: |
           echo "Building Docker image with tag: ${{ env.IMAGE_NAME }}"
           docker build -t ${{ env.IMAGE_NAME }} .
           echo "Docker image built successfully."
 
-      # Step 4: 推送 Docker 镜像到 GHCR
+      # Step 4: 推送 Docker 镜像到 GHCR (只有在 DOCKER_BUILD_REQUIRED 为 true 时执行)
       - name: Push Docker Image to GHCR
+        if: ${{ env.DOCKER_BUILD_REQUIRED == 'true' }}  # 仅在 DOCKER_BUILD_REQUIRED 为 true 时执行
         run: |
           echo "Pushing Docker image to GHCR..."
           docker push ${{ env.IMAGE_NAME }}
@@ -72,6 +74,7 @@ jobs:
             -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
             -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
             -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
             mcr.microsoft.com/azure-cli:latest bash -c "
               echo 'Logging into Azure...'
               az login --service-principal \
@@ -130,7 +133,10 @@ jobs:
                   --cpu 1 \
                   --memory 2Gi \
                   --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                  --revision-suffix new-revision
+                  --revision-suffix new-revision \
+                  --registry-login-server ghcr.io \
+                  --registry-username \$GITHUB_ACTOR \
+                  --registry-password \$GHCR_TOKEN
                 echo 'Container app updated successfully.'
               fi
             "
