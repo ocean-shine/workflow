@@ -1,84 +1,137 @@
-name: Build and Deploy to Azure Container App using GHCR
+name: CI/CD Pipeline v2
+
+env:
+  AZURE_CONTAINER_APP_NAME: workflow
+  AZURE_GROUP_NAME: workflow-resource-group
+  AZURE_REGION: eastus
+  IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
+  OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+  OPENAI_API_BASE: https://aiocean.openai.azure.com/
+  OPENAI_API_VERSION: "2024-08-01-preview"
+  GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+  DOCKER_BUILD_REQUIRED: true
+  AZURE_CONTAINER_APP_ENV_NAME: workflow-env
 
 on:
   push:
     branches:
-      - main  # 触发 CI/CD 的分支
+      - main
 
-env:
-  AZURE_CONTAINER_APP_NAME: workflow  # Azure 容器应用的名称
-  AZURE_GROUP_NAME: workflow-resource-group  # Azure 资源组名称
-  AZURE_REGION: eastus  # Azure 区域
-  IMAGE_NAME: ghcr.io/${{ github.actor }}/workflow:latest  # 镜像名称
-  GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}  # GitHub 容器注册表的 Token
-  AZURE_CONTAINER_APP_ENV_NAME: workflow-env  # 容器应用环境名称
-  DOCKER_BUILD_REQUIRED: false  # 设置为 false 跳过构建 Docker 镜像步骤
+permissions:
+  id-token: write
 
 jobs:
   build_and_deploy:
-    runs-on: ubuntu-latest  # 使用 Ubuntu 环境运行 CI/CD
-
-    permissions:
-      packages: write  # 向 GitHub 容器注册表写入的权限
-      contents: read  # 读取 GitHub 仓库的权限
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout 代码
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Step 3: 登录到 GitHub 容器注册表
-      - name: Log in to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}  # GitHub 用户名
-          password: ${{ secrets.GHCR_TOKEN }}  # GitHub 注册表 Token
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
 
-      # Step 4: 构建并推送 Docker 镜像到 GHCR（仅当 DOCKER_BUILD_REQUIRED 为 true 时才执行）
-      - name: Build and Push Docker Image to GHCR
-        if: ${{ env.DOCKER_BUILD_REQUIRED == 'true' }}  # 仅当 DOCKER_BUILD_REQUIRED 为 true 时执行
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: ${{ env.IMAGE_NAME }}  # 镜像标签
-          file: ./Dockerfile  # Dockerfile 文件路径
+      - name: Build Docker Image
+        if: ${{ env.DOCKER_BUILD_REQUIRED == 'true' }}
+        run: |
+          echo "Building Docker image..."
+          docker build -t ${{ env.IMAGE_NAME }} .
+          echo "Docker image built successfully."
 
-      # Step 5: 登录到 Azure
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # Azure 服务主体凭证（从 GitHub Secrets 获取）
+      - name: Push Docker Image to GHCR
+        if: ${{ env.DOCKER_BUILD_REQUIRED == 'true' }}
+        run: |
+          echo "Pushing Docker image to GHCR..."
+          docker push ${{ env.IMAGE_NAME }}
+          echo "Docker image pushed successfully."
 
-      # Step 6: 更新 Azure 容器应用镜像
-      - name: Update container app on Azure
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            # 安装扩展包
-            az config set extension.use_dynamic_install=yes_without_prompt
+      - name: Deploy to Azure
+        run: |
+          # 运行 Azure CLI 容器来执行所有 Azure 操作
+          docker run \
+            -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
+            -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
+            -e AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }} \
+            -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
+            -e AZURE_REGION=${{ env.AZURE_REGION }} \
+            -e AZURE_CONTAINER_APP_ENV_NAME=${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
+            -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
+            -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
+            -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
+            -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
+            -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
+            mcr.microsoft.com/azure-cli:latest bash -c "
+              echo 'Logging into Azure...'
+              az login --service-principal \
+                -u \$AZURE_CLIENT_ID \
+                -p \$AZURE_CLIENT_SECRET \
+                --tenant \$AZURE_TENANT_ID
+              echo 'Azure login successful.'
 
-            # 更新容器应用
-            az containerapp update \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_GROUP_NAME }} \
-              --image ${{ env.IMAGE_NAME }} \
-              --cpu 1 \
-              --memory 2Gi \
-              --revision-suffix v2
+              # 检查资源组是否存在
+              echo 'Checking resource group...'
+              RESOURCE_GROUP_EXISTS=\$(az group show --name \$AZURE_GROUP_NAME --query 'name' -o tsv)
+              if [ -z \"\$RESOURCE_GROUP_EXISTS\" ]; then
+                echo 'Creating resource group...'
+                az group create --name \$AZURE_GROUP_NAME --location \$AZURE_REGION
+                echo 'Resource group created successfully.'
+              else
+                echo 'Resource group already exists.'
+              fi
 
-            # 配置容器应用的 Ingress 设置
-            az containerapp ingress enable \
-              --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
-              --resource-group ${{ env.AZURE_GROUP_NAME }} \
-              --target-port 8080 \
-              --ingress external \
-              --protocol HTTP
+              # 检查容器应用环境是否存在
+              echo 'Checking container app environment...'
+              ENV_EXISTS=\$(az containerapp env show --name \$AZURE_CONTAINER_APP_ENV_NAME --resource-group \$AZURE_GROUP_NAME --query 'name' -o tsv)
+              if [ -z \"\$ENV_EXISTS\" ]; then
+                echo 'Creating container app environment...'
+                az containerapp env create --name \$AZURE_CONTAINER_APP_ENV_NAME --resource-group \$AZURE_GROUP_NAME --location \$AZURE_REGION
+                echo 'Container app environment created successfully.'
+              else
+                echo 'Container app environment already exists.'
+              fi
 
-      # Step 7: 注销 Azure
-      - name: Logout from Azure
-        run: az logout  # 完成后注销 Azure 登录
+              # 创建容器应用
+              echo 'Creating container app...'
+              az containerapp create \
+                --name \$AZURE_CONTAINER_APP_NAME \
+                --resource-group \$AZURE_GROUP_NAME \
+                --image \$IMAGE_NAME \
+                --cpu 1 \
+                --memory 2Gi \
+                --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
+                --ingress external \
+                --target-port 8080 \
+                --environment \$AZURE_CONTAINER_APP_ENV_NAME \
+                --revision-suffix v2 \
+                --latest-revision true   # <-- 添加这一行以确保使用最新修订版本
+              echo 'Container app created successfully.'
+
+              # 设置容器注册表凭证
+              echo 'Setting registry credentials...'
+              az containerapp registry set \
+                --name \$AZURE_CONTAINER_APP_NAME \
+                --resource-group \$AZURE_GROUP_NAME \
+                --server ghcr.io \
+                --username \$AZURE_CLIENT_ID \
+                --password \$GHCR_TOKEN
+              echo 'Registry credentials set.'
+
+              # 更新容器应用
+              echo 'Updating container app...'
+              az containerapp update \
+                --name \$AZURE_CONTAINER_APP_NAME \
+                --resource-group \$AZURE_GROUP_NAME \
+                --image \$IMAGE_NAME \
+                --cpu 1 \
+                --memory 2Gi \
+                --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
+                --revision-suffix v2 \
+                --latest-revision true   # <-- 确保更新时也使用最新修订版本
+              echo 'Container app updated.'
+            "
+          echo "Azure deployment complete!"
