@@ -9,7 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: true
+  DOCKER_BUILD_REQUIRED: false
   AZURE_CONTAINER_APP_ENV_NAME: workflow-env  # 添加环境名称
 
 on:
@@ -130,8 +130,7 @@ jobs:
                   --cpu 1 \
                   --memory 2Gi \
                   --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                  --revision-suffix new-revision \
-                  --environment \$AZURE_CONTAINER_APP_ENV_NAME
+                  --revision-suffix new-revision
                 echo 'Container app updated successfully.'
               fi
             "
