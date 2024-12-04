@@ -5,7 +5,7 @@ import pandas as pd
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.embeddings import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
