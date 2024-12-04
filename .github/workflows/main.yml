@@ -56,7 +56,19 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}
           echo "Docker image pushed to GHCR successfully."
 
-      # Step 5: 使用 Docker 部署到 Azure
+      # Step 5: 配置 Azure 容器应用注册表凭证
+      - name: Set Registry Credentials for Azure Container App
+        run: |
+          echo "Setting registry credentials for Azure Container App..."
+          az containerapp registry set \
+            --name $AZURE_CONTAINER_APP_NAME \
+            --resource-group $AZURE_GROUP_NAME \
+            --registry-login-server ghcr.io \
+            --registry-username ${{ github.actor }} \
+            --registry-password $GHCR_TOKEN
+          echo "Registry credentials set successfully."
+
+      # Step 6: 使用 Docker 部署到 Azure
       - name: Deploy to Azure
         run: |
           # 通过 Docker 容器一次性执行所有的 az 命令
@@ -119,10 +131,7 @@ jobs:
                   --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
                   --ingress external \
                   --target-port 8080 \
-                  --environment \$AZURE_CONTAINER_APP_ENV_NAME \
-                  --registry-login-server ghcr.io \
-                  --registry-username \$GITHUB_ACTOR \
-                  --registry-password \$GHCR_TOKEN
+                  --environment \$AZURE_CONTAINER_APP_ENV_NAME
                 echo 'Container app created successfully.'
               else
                 echo 'Container app already exists. Updating the container app...'
@@ -133,12 +142,9 @@ jobs:
                   --cpu 1 \
                   --memory 2Gi \
                   --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                  --revision-suffix new-revision \
-                  --registry-login-server ghcr.io \
-                  --registry-username \$GITHUB_ACTOR \
-                  --registry-password \$GHCR_TOKEN
+                  --revision-suffix v2
                 echo 'Container app updated successfully.'
               fi
             "
 
-          echo "Azure deployment completed successfully."
+          echo "Azure deployment complete!"
