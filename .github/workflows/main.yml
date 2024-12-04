@@ -9,7 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: false
+  DOCKER_BUILD_REQUIRED: true
   AZURE_CONTAINER_APP_ENV_NAME: workflow-env
 
 on:
