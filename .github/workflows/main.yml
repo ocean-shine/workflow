@@ -1,16 +1,6 @@
 name: CI/CD Pipeline v3
 
-env:
-  AZURE_CONTAINER_APP_NAME: workflow
-  AZURE_GROUP_NAME: workflow-resource-group
-  AZURE_REGION: eastus
-  IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
-  OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-  OPENAI_API_BASE: https://aiocean.openai.azure.com/
-  OPENAI_API_VERSION: "2024-08-01-preview"
-  GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: true
-  AZURE_CONTAINER_APP_ENV_NAME: workflow-env
+
 
 on:
   push:
@@ -23,7 +13,17 @@ permissions:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-
+    env:
+      AZURE_CONTAINER_APP_NAME: workflow
+      AZURE_GROUP_NAME: workflow-resource-group
+      AZURE_REGION: eastus
+      IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
+      OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      OPENAI_API_BASE: https://aiocean.openai.azure.com/
+      OPENAI_API_VERSION: "2024-08-01-preview"
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      DOCKER_BUILD_REQUIRED: true
+      AZURE_CONTAINER_APP_ENV_NAME: workflow-env
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
