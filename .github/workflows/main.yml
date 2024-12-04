@@ -116,7 +116,7 @@ jobs:
           az containerapp create \
             --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
             --resource-group ${{ env.AZURE_GROUP_NAME }} \
-            --cpu 2 --memory 8Gi \
+            --cpu 2 --memory 4Gi \
             --env-vars OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
             --image ${{ env.IMAGE_NAME }} \
