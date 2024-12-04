@@ -11,8 +11,6 @@ import faiss
 import numpy as np
 from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv(".env")
 
 # 设置 OpenAI API 基础配置
 openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
