@@ -60,6 +60,13 @@ jobs:
       - name: Set Registry Credentials for Azure Container App
         run: |
           echo "Setting registry credentials for Azure Container App..."
+          az login --service-principal \
+            -u ${{ secrets.AZURE_CLIENT_ID }} \
+            -p ${{ secrets.AZURE_CLIENT_SECRET }} \
+            --tenant ${{ secrets.AZURE_TENANT_ID }}
+          echo "Azure login successful."
+
+          # 设置容器应用的注册表凭证
           az containerapp registry set \
             --name $AZURE_CONTAINER_APP_NAME \
             --resource-group $AZURE_GROUP_NAME \
