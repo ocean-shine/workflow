@@ -20,6 +20,7 @@ jobs:
       OPENAI_API_BASE: https://aiocean.openai.azure.com/
       OPENAI_API_VERSION: "2024-08-01-preview"
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      GHCR_USERNAME: ocean-shine
       DOCKER_BUILD_REQUIRED: false  # 可以设置为 true 来构建镜像
       AZURE_CONTAINER_APP_ENV_NAME: workflow-env
     steps:
@@ -113,7 +114,7 @@ jobs:
             --env-vars OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
             --image ${{ env.IMAGE_NAME }} \
-            --registry-username ${{ secrets.GHCR_USERNAME }} \
+            --registry-username ${{ env.GHCR_USERNAME }} \
             --registry-password ${{ secrets.GHCR_TOKEN }}
 
           echo "Azure Container App deployment complete!"
