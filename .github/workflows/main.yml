@@ -51,7 +51,6 @@ jobs:
 
       - name: Deploy to Azure using ghcr.io/ocean-shine/workflow:latest
         run: |
-          # 运行 Azure CLI 操作在 ghcr.io/ocean-shine/workflow:latest 镜像中
           docker run \
             -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
             -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
