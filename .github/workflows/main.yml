@@ -9,7 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: true
+  DOCKER_BUILD_REQUIRED: false
   AZURE_CONTAINER_APP_ENV_NAME: workflow-env
 
 on:
@@ -108,11 +108,12 @@ jobs:
                 --target-port 8080 \
                 --environment \$AZURE_CONTAINER_APP_ENV_NAME \
                 --revision-suffix v2 \
-                --latest-revision true   # <-- 添加这一行以确保使用最新修订版本
+                
               echo 'Container app created successfully.'
 
               # 设置容器注册表凭证
               echo 'Setting registry credentials...'
+              echo 'GHCR_TOKEN=$GHCR_TOKEN'
               az containerapp registry set \
                 --name \$AZURE_CONTAINER_APP_NAME \
                 --resource-group \$AZURE_GROUP_NAME \
