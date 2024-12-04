@@ -73,7 +73,7 @@ jobs:
             az containerapp env create --name $AZURE_CONTAINER_APP_ENV_NAME --resource-group $AZURE_GROUP_NAME --location $AZURE_REGION
           fi
 
-          # Step 3: Check Container App
+          # Step 3: Check Container App Status
           echo "Checking container app..."
           APP_EXISTS=$(az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query "name" -o tsv)
           if [ -z "$APP_EXISTS" ]; then
@@ -92,7 +92,7 @@ jobs:
           else
             APP_STATUS=$(az containerapp show --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --query "properties.provisioningState" -o tsv)
             if [ "$APP_STATUS" != "Succeeded" ]; then
-              echo "Container app in failed state. Recreating..."
+              echo "Container app is in failed state. Deleting and recreating..."
               az containerapp delete --name $AZURE_CONTAINER_APP_NAME --resource-group $AZURE_GROUP_NAME --yes
               az containerapp create \
                 --name $AZURE_CONTAINER_APP_NAME \
@@ -104,7 +104,7 @@ jobs:
                 --ingress external \
                 --target-port 8080 \
                 --environment $AZURE_CONTAINER_APP_ENV_NAME
-              echo "Container app recreated."
+              echo "Container app recreated successfully."
             else
               echo "Container app exists and is healthy. Skipping creation."
             fi
