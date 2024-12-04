@@ -130,7 +130,7 @@ jobs:
                   --name \$AZURE_CONTAINER_APP_NAME \
                   --resource-group \$AZURE_GROUP_NAME \
                   --server ghcr.io \
-                  --username \$AZURE_CLIENT_ID \
+                  --username \$GITHUB_ACTOR  \
                   --password \$GHCR_TOKEN
                 echo 'Registry credentials set successfully.'
 
