@@ -21,7 +21,7 @@ jobs:
       OPENAI_API_VERSION: "2024-08-01-preview"
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       GHCR_USERNAME: ocean-shine
-      DOCKER_BUILD_REQUIRED: false  # 可以设置为 true 来构建镜像
+      DOCKER_BUILD_REQUIRED: true  # 可以设置为 true 来构建镜像
       AZURE_CONTAINER_APP_ENV_NAME: workflow-env
     steps:
       - name: Checkout repository
