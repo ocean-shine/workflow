@@ -81,29 +81,24 @@ jobs:
             echo "Resource Group does not exist, skipping deletion."
           fi
 
-          # 检查容器应用是否存在
-          APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
-
-          if [ "$APP_EXISTS" != "NOT_FOUND" ]; then
-            echo "Container App exists. Deleting app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
-            az containerapp delete --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
-            echo "Container App deletion started."
-
-            # 等待容器应用被删除
-            echo "Waiting for the container app to be deleted..."
-            while az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
-              echo "Container App still exists. Waiting for 1 minute..."
-              sleep 60
-            done
-            echo "Container App deleted successfully."
-          else
-            echo "Container App does not exist, skipping deletion."
-          fi
-
-          # 重新创建资源组（如果之前被删除）
+          # 创建资源组
           echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
           az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
           echo "Resource group created successfully."
+
+          # 检查环境是否存在
+          ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
+
+          if [ "$ENV_EXISTS" != "NOT_FOUND" ]; then
+            echo "Environment exists. Skipping creation."
+          else
+            echo "Creating Azure Container App Environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
+            az containerapp env create \
+              --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
+              --resource-group ${{ env.AZURE_GROUP_NAME }} \
+              --location ${{ env.AZURE_REGION }}
+            echo "Container App environment created successfully."
+          fi
 
           # 部署容器应用
           echo "Deploying Docker image to Azure Container App..."
