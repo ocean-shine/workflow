@@ -51,6 +51,7 @@ jobs:
 
       - name: Deploy to Azure using ghcr.io/ocean-shine/workflow:latest
         run: |
+          echo 'Running Azure deployment...'
           docker run \
             -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
             -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
@@ -64,7 +65,7 @@ jobs:
             -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
             -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
-            ghcr.io/ocean-shine/workflow:latest bash -c "
+            ghcr.io/ocean-shine/workflow:latest /bin/sh -c "
               echo 'Logging into Azure...'
               az login --service-principal \
                 -u \$AZURE_CLIENT_ID \
