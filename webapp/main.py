@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 
 
 # 设置 OpenAI API 基础配置
-openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 openai.api_type = "azure"
 api_version = "2024-08-01-preview"
-api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_base = os.getenv("OPENAI_API_BASE")
 
 client = AzureOpenAI(
     azure_endpoint = api_base,
@@ -90,7 +90,7 @@ def assistant(query, context):
         {"role": "assistant", "content": " ".join(context)}  # 将检索到的文档内容作为上下文
     ]
 
-    response = openai.ChatCompletion.create(
+    response = client.ChatCompletion.create(
         model="gpt-4o",  # 使用 GPT-4 或你配置的有效模型
         messages=messages
     )
