@@ -64,35 +64,21 @@ jobs:
 
           # 检查资源组是否存在
           RESOURCE_GROUP_EXISTS=$(az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
-
           if [ "$RESOURCE_GROUP_EXISTS" != "NOT_FOUND" ]; then
-            echo "Resource Group exists. Deleting resource group: ${{ env.AZURE_GROUP_NAME }}"
-            az group delete --name ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
-            echo "Resource group deletion started."
-
-            # 等待资源组被删除
-            echo "Waiting for the resource group to be deleted..."
-            while az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
-              echo "Resource group still exists. Waiting for 1 minute..."
-              sleep 60
-            done
-            echo "Resource group deleted successfully."
+            echo "Resource Group exists, skipping deletion."
           else
-            echo "Resource Group does not exist, skipping deletion."
+            echo "Resource Group does not exist, creating: ${{ env.AZURE_GROUP_NAME }}"
+            az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+            echo "Resource group created successfully."
           fi
 
-          # 创建资源组
-          echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
-          az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
-          echo "Resource group created successfully."
-
-          # 检查环境是否存在
+          # 检查容器应用环境是否存在
           ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
 
           if [ "$ENV_EXISTS" != "NOT_FOUND" ]; then
-            echo "Environment exists. Skipping creation."
+            echo "Container App environment exists, skipping creation."
           else
-            echo "Creating Azure Container App Environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
+            echo "Container App environment does not exist, creating: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
             az containerapp env create \
               --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
               --resource-group ${{ env.AZURE_GROUP_NAME }} \
@@ -100,14 +86,34 @@ jobs:
             echo "Container App environment created successfully."
           fi
 
-          # 部署容器应用
-          echo "Deploying Docker image to Azure Container App..."
+          # 检查容器应用是否存在
+          APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
+
+          if [ "$APP_EXISTS" != "NOT_FOUND" ]; then
+            echo "Container app exists, deleting existing app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+            az containerapp delete --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
+            echo "Container app deletion started. Waiting for it to be deleted..."
+            
+            # 等待删除容器应用
+            until ! az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
+              echo "Container app still exists. Waiting for 1 minute..."
+              sleep 60
+            done
+            echo "Container app deleted successfully."
+          else
+            echo "Container app does not exist, skipping deletion."
+          fi
+
+          # 创建容器应用
+          echo "Creating new Azure Container App: ${{ env.AZURE_CONTAINER_APP_NAME }}"
           az containerapp create \
             --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
             --resource-group ${{ env.AZURE_GROUP_NAME }} \
             --cpu 1 --memory 2Gi \
             --env-vars OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
-            --image ${{ env.IMAGE_NAME }}
+            --image ${{ env.IMAGE_NAME }} \
+            --registry-username ${{ secrets.GHCR_USERNAME }} \
+            --registry-password ${{ secrets.GHCR_TOKEN }}
 
           echo "Azure Container App deployment complete!"
