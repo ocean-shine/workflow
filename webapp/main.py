@@ -13,13 +13,14 @@ from dotenv import load_dotenv
 
 
 # 设置 OpenAI API 基础配置
-openai.api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY")
 print(os.getenv("OPENAI_API_KEY"))
 openai.api_type = "azure"
 api_version = "2024-08-01-preview"
 api_base = os.getenv("OPENAI_API_BASE")
 
 client = AzureOpenAI(
+    api_key = api_key,
     azure_endpoint = api_base,
     api_version = api_version
 )
