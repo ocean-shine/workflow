@@ -80,11 +80,6 @@ jobs:
                 --tenant \$AZURE_TENANT_ID
               echo 'Azure login successful.'
 
-              # 登录到 GitHub Container Registry
-              echo 'Logging into GitHub Container Registry...'
-              docker login ghcr.io -u \$GITHUB_ACTOR -p \$GHCR_TOKEN
-              echo 'Logged into GitHub Container Registry successfully.'
-
               # 检查资源组是否存在
               echo 'Checking if the resource group \$AZURE_GROUP_NAME exists...'
               RESOURCE_GROUP_EXISTS=\$(az group show --name \$AZURE_GROUP_NAME --query 'name' -o tsv)
@@ -134,9 +129,9 @@ jobs:
                   --image \$IMAGE_NAME \
                   --cpu 1 \
                   --memory 2Gi \
-                  --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                  --ingress external \
-                  --target-port 8080
+                  --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
+                  --revision-suffix new-revision \
+                  --environment \$AZURE_CONTAINER_APP_ENV_NAME
                 echo 'Container app updated successfully.'
               fi
             "
