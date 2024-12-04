@@ -5,6 +5,7 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y \
     curl \
     jq \
+    vim \
     gnupg && \
     curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
