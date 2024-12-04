@@ -9,7 +9,7 @@ env:
   OPENAI_API_BASE: https://aiocean.openai.azure.com/
   OPENAI_API_VERSION: "2024-08-01-preview"
   GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-  DOCKER_BUILD_REQUIRED: false
+  DOCKER_BUILD_REQUIRED: true
   AZURE_CONTAINER_APP_ENV_NAME: workflow-env
 
 on:
@@ -49,9 +49,9 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}
           echo "Docker image pushed successfully."
 
-      - name: Deploy to Azure
+      - name: Deploy to Azure using ghcr.io/ocean-shine/workflow:latest
         run: |
-          # 运行 Azure CLI 容器来执行所有 Azure 操作
+          # 运行 Azure CLI 操作在 ghcr.io/ocean-shine/workflow:latest 镜像中
           docker run \
             -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
             -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
@@ -65,7 +65,7 @@ jobs:
             -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
             -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
             -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
-            mcr.microsoft.com/azure-cli:latest bash -c "
+            ghcr.io/ocean-shine/workflow:latest bash -c "
               echo 'Logging into Azure...'
               az login --service-principal \
                 -u \$AZURE_CLIENT_ID \
@@ -95,25 +95,45 @@ jobs:
                 echo 'Container app environment already exists.'
               fi
 
-              # 创建容器应用
-              echo 'Creating container app...'
-              az containerapp create \
-                --name \$AZURE_CONTAINER_APP_NAME \
-                --resource-group \$AZURE_GROUP_NAME \
-                --image \$IMAGE_NAME \
-                --cpu 1 \
-                --memory 2Gi \
-                --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                --ingress external \
-                --target-port 8080 \
-                --environment \$AZURE_CONTAINER_APP_ENV_NAME \
-                --revision-suffix v2 \
-                
-              echo 'Container app created successfully.'
+              # 检查容器应用是否存在
+              echo 'Checking container app...'
+              APP_EXISTS=\$(az containerapp show --name \$AZURE_CONTAINER_APP_NAME --resource-group \$AZURE_GROUP_NAME --query 'name' -o tsv)
+              if [ -z \"\$APP_EXISTS\" ]; then
+                echo 'Creating container app...'
+                az containerapp create \
+                  --name \$AZURE_CONTAINER_APP_NAME \
+                  --resource-group \$AZURE_GROUP_NAME \
+                  --image \$IMAGE_NAME \
+                  --cpu 1 \
+                  --memory 2Gi \
+                  --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
+                  --ingress external \
+                  --target-port 8080 \
+                  --environment \$AZURE_CONTAINER_APP_ENV_NAME
+                echo 'Container app created successfully.'
+              else
+                APP_STATUS=\$(az containerapp show --name \$AZURE_CONTAINER_APP_NAME --resource-group \$AZURE_GROUP_NAME --query 'properties.provisioningState' -o tsv)
+                if [ \"\$APP_STATUS\" != \"Succeeded\" ]; then
+                  echo 'Container app is in failed state. Deleting and recreating...'
+                  az containerapp delete --name \$AZURE_CONTAINER_APP_NAME --resource-group \$AZURE_GROUP_NAME --yes
+                  az containerapp create \
+                    --name \$AZURE_CONTAINER_APP_NAME \
+                    --resource-group \$AZURE_GROUP_NAME \
+                    --image \$IMAGE_NAME \
+                    --cpu 1 \
+                    --memory 2Gi \
+                    --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
+                    --ingress external \
+                    --target-port 8080 \
+                    --environment \$AZURE_CONTAINER_APP_ENV_NAME
+                  echo 'Container app recreated successfully.'
+                else
+                  echo 'Container app exists and is healthy. Skipping creation.'
+                fi
+              fi
 
               # 设置容器注册表凭证
               echo 'Setting registry credentials...'
-              echo 'GHCR_TOKEN=$GHCR_TOKEN'
               az containerapp registry set \
                 --name \$AZURE_CONTAINER_APP_NAME \
                 --resource-group \$AZURE_GROUP_NAME \
@@ -131,8 +151,7 @@ jobs:
                 --cpu 1 \
                 --memory 2Gi \
                 --set-env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                --revision-suffix v2 \
-                --latest-revision true   # <-- 确保更新时也使用最新修订版本
+                --revision-suffix v2
               echo 'Container app updated.'
             "
           echo "Azure deployment complete!"
