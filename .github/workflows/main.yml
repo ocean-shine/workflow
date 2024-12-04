@@ -127,11 +127,11 @@ jobs:
                 # 设置容器应用的注册表凭证
                 echo 'Setting registry credentials for Azure Container App...'
                 az containerapp registry set \
-                  --name \$AZURE_CONTAINER_APP_NAME \
-                  --resource-group \$AZURE_GROUP_NAME \
+                  --name $AZURE_CONTAINER_APP_NAME \
+                  --resource-group $AZURE_GROUP_NAME \
                   --server ghcr.io \
-                  --username \$GITHUB_ACTOR  \
-                  --password \$GHCR_TOKEN
+                  --username $GITHUB_ACTOR \
+                  --password $GHCR_TOKEN
                 echo 'Registry credentials set successfully.'
 
                 # 更新容器应用
