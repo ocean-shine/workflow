@@ -27,4 +27,4 @@ COPY ./webapp /webapp
 RUN ls /webapp  # 检查是否成功复制了 main.py
 
 # 启动 FastAPI 应用
-CMD ["main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["main:app", "--host", "0.0.0.0", "--port", "80"]
