@@ -47,44 +47,65 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}
           echo "Docker image pushed successfully."
 
-      - name: Deploy to Azure using ghcr.io/ocean-shine/workflow:latest
+      - name: Deploy to Azure Container App
         run: |
-          docker run \
-            -e AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }} \
-            -e AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }} \
-            -e AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }} \
-            -e AZURE_GROUP_NAME=${{ env.AZURE_GROUP_NAME }} \
-            -e AZURE_REGION=${{ env.AZURE_REGION }} \
-            -e AZURE_CONTAINER_APP_ENV_NAME=${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
-            -e AZURE_CONTAINER_APP_NAME=${{ env.AZURE_CONTAINER_APP_NAME }} \
-            -e IMAGE_NAME=${{ env.IMAGE_NAME }} \
-            -e OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} \
-            -e OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} \
-            -e OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
-            -e GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
-            ghcr.io/ocean-shine/workflow:latest bash -c "
-              echo 'Logging into Azure...'
-              az login --service-principal \
-                --username \$AZURE_CLIENT_ID \
-                --password \$AZURE_CLIENT_SECRET \
-                --tenant \$AZURE_TENANT_ID
-              echo 'Azure login successful.'
+          echo "Deploying Docker image to Azure Container App..."
 
-              # Resource group setup
-              RESOURCE_GROUP_EXISTS=\$(az group show --name \$AZURE_GROUP_NAME --query 'name' -o tsv)
-              if [ -z \"\$RESOURCE_GROUP_EXISTS\" ]; then
-                az group create --name \$AZURE_GROUP_NAME --location \$AZURE_REGION
-              fi
+          # Login to Azure CLI using Service Principal
+          echo "Logging into Azure..."
+          az login --service-principal \
+            --username ${{ secrets.AZURE_CLIENT_ID }} \
+            --password ${{ secrets.AZURE_CLIENT_SECRET }} \
+            --tenant ${{ secrets.AZURE_TENANT_ID }}
 
-              # Container app setup
-              APP_EXISTS=\$(az containerapp show --name \$AZURE_CONTAINER_APP_NAME --resource-group \$AZURE_GROUP_NAME --query 'name' -o tsv)
-              if [ -z \"\$APP_EXISTS\" ]; then
-                az containerapp create \
-                  --name \$AZURE_CONTAINER_APP_NAME \
-                  --resource-group \$AZURE_GROUP_NAME \
-                  --cpu 1 --memory 2Gi \
-                  --env-vars OPENAI_API_KEY=\$OPENAI_API_KEY OPENAI_API_BASE=\$OPENAI_API_BASE OPENAI_API_VERSION=\$OPENAI_API_VERSION \
-                  --ingress external --target-port 80 --environment \$AZURE_CONTAINER_APP_ENV_NAME
-              fi
-            "
-          echo "Azure deployment complete!"
+          echo "Azure login successful."
+
+          # Check if the Resource Group exists, if it does, delete it first
+          RESOURCE_GROUP_EXISTS=$(az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          if [ -n "$RESOURCE_GROUP_EXISTS" ]; then
+            echo "Resource Group exists. Deleting resource group: ${{ env.AZURE_GROUP_NAME }}"
+            az group delete --name ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
+            echo "Resource group deleted successfully."
+            # Wait for deletion to be complete (optional, depends on your use case)
+            # sleep 60
+          fi
+
+          # Create the Resource Group
+          echo "Creating resource group: ${{ env.AZURE_GROUP_NAME }}"
+          az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+
+          # Ensure the Environment exists, if it does, delete it first
+          ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          if [ -n "$ENV_EXISTS" ]; then
+            echo "Container App Environment exists. Deleting environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
+            az containerapp env delete --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
+            echo "Container App Environment deleted successfully."
+            # Wait for deletion to be complete (optional, depends on your use case)
+            # sleep 60
+          fi
+
+          # Create the Container App Environment
+          echo "Creating Container App Environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
+          az containerapp env create --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
+
+          # Check if the Container App exists, if it does, delete it first
+          APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv)
+          if [ -n "$APP_EXISTS" ]; then
+            echo "Azure Container App exists. Deleting app: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+            az containerapp delete --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
+            echo "Azure Container App deleted successfully."
+            # Wait for deletion to be complete (optional, depends on your use case)
+            # sleep 60
+          fi
+
+          # Create the Container App
+          echo "Creating new Azure Container App: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+          az containerapp create \
+            --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.AZURE_GROUP_NAME }} \
+            --cpu 1 --memory 2Gi \
+            --env-vars OPENAI_API_KEY=${{ env.OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
+            --image ${{ env.IMAGE_NAME }}
+
+          echo "Azure Container App deployment complete!"
