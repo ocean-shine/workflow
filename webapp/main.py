@@ -10,6 +10,11 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from dotenv import load_dotenv
+import logging
+
+# 配置日志记录，确保日志同时输出到控制台
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()  # 确保环境变量被加载到进程中
@@ -21,11 +26,13 @@ os.environ['TRANSFORMERS_CACHE'] = os.path.join(current_directory, '..', 'model'
 # 打印缓存目录
 cache_dir = os.getenv('TRANSFORMERS_CACHE')
 print(f"模型缓存目录: {cache_dir}")
+logger.info(f"模型缓存目录: {cache_dir}")  # 记录日志
 
 # 设置 OpenAI API 基础配置
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
 api_base = os.getenv("AZURE_OPENAI_API_BASE")  # 修改为 AZURE_OPENAI_API_BASE
-print(f"API Key: {api_key}")  # 你可以在此行调试检查是否加载了正确的API密钥
+print(f"API Key: {api_key}")  # 使用 print 输出
+logger.info(f"API Key: {api_key}")  # 记录日志
 
 # 确保 API 密钥和端点存在
 if not api_key or not api_base:
@@ -48,18 +55,23 @@ app = FastAPI()
 try:
     model = SentenceTransformer('sentence-transformers/paraphrase-distilroberta-base-v1')
     print("Sentence-Transformer model loaded successfully.")
+    logger.info("Sentence-Transformer model loaded successfully.")  # 记录日志
 except Exception as e:
     print(f"Error loading Sentence-Transformer model: {e}")
+    logger.error(f"Error loading Sentence-Transformer model: {e}")  # 记录错误日志
 
 # 读取 wine 数据（假设文件名为 wine-ratings.csv）
 try:
-    wine_data = pd.read_csv('../wine-ratings.csv')
+    wine_data = pd.read_csv(f'{current_directory}/../wine-ratings.csv')
     print("Wine data loaded successfully.")
+    logger.info("Wine data loaded successfully.")  # 记录日志
 except Exception as e:
     print(f"Error loading wine data: {e}")
+    logger.error(f"Error loading wine data: {e}")  # 记录错误日志
 
 # 打印数据检查
 print(wine_data.head())
+logger.info(f"Wine data head:\n{wine_data.head()}")  # 记录日志
 
 # 获取需要处理的列（假设我们用 "notes" 列作为文本内容）
 descriptions = wine_data['notes'].tolist()
@@ -68,8 +80,10 @@ descriptions = wine_data['notes'].tolist()
 try:
     embeddings = model.encode(descriptions)
     print("Embeddings generated successfully.")
+    logger.info("Embeddings generated successfully.")  # 记录日志
 except Exception as e:
     print(f"Error generating embeddings: {e}")
+    logger.error(f"Error generating embeddings: {e}")  # 记录错误日志
 
 # 将嵌入转换为 numpy 数组
 embedding_matrix = np.array(embeddings).astype('float32')
@@ -97,6 +111,8 @@ def ask(body: Body):
         chat_bot_response = assistant(body.query, search_result)
         return {'response': chat_bot_response}
     except Exception as e:
+        print(f"Error in /ask endpoint: {e}")
+        logger.error(f"Error in /ask endpoint: {e}")  # 记录错误日志
         return {'error': f"Error in /ask endpoint: {e}"}
 
 def search(query):
@@ -115,6 +131,8 @@ def search(query):
         relevant_docs = wine_data.iloc[indices[0]]['notes'].tolist()
         return relevant_docs
     except Exception as e:
+        print(f"Error in search: {e}")
+        logger.error(f"Error in search: {e}")  # 记录错误日志
         raise ValueError(f"Error in search: {e}")
 
 def assistant(query, context):
@@ -136,4 +154,6 @@ def assistant(query, context):
 
         return response['choices'][0]['message']['content']
     except Exception as e:
+        print(f"Error in assistant: {e}")
+        logger.error(f"Error in assistant: {e}")  # 记录错误日志
         raise ValueError(f"Error in assistant: {e}")
