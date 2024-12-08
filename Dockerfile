@@ -11,20 +11,20 @@ RUN apt-get update && apt-get install -y \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 升级 pip 并安装通用依赖
-RUN pip install --no-cache-dir --upgrade pip openai
+RUN pip install --no-cache-dir --upgrade pip 
 
 # 设置工作目录
-WORKDIR /webapp
+WORKDIR /workflow
 
-# 复制并安装 Python 依赖
-COPY ./requirements.txt /webapp/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# 将 Dockerfile 所在路径的所有文件复制到 Docker 容器中的 /workflow 文件夹
+COPY . /workflow
 
-# 复制项目代码到容器
-COPY ./webapp /webapp
 
-# 确保 main.py 文件在 /webapp 目录
-RUN ls /webapp  # 检查是否成功复制了 main.py
+RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
 
+# 确保 main.py 文件在 /workflow/webapp 目录
+RUN ls /workflow/webapp  # 检查是否成功复制了 main.py
+# 进入 /workflow/webapp 目录并安装 Python 依赖
+WORKDIR /workflow/webapp
 # 启动 FastAPI 应用
-CMD ["main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
