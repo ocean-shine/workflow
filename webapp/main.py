@@ -12,10 +12,7 @@ import numpy as np
 from dotenv import load_dotenv
 
 # 加载环境变量
-load_dotenv('../.env')
-
-# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+load_dotenv()  # 确保环境变量被加载到进程中
 
 # 获取当前文件的目录，并设置缓存目录为 '../model'
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +24,7 @@ print(f"模型缓存目录: {cache_dir}")
 
 # 设置 OpenAI API 基础配置
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
-api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_base = os.getenv("AZURE_OPENAI_API_BASE")  # 修改为 AZURE_OPENAI_API_BASE
 print(f"API Key: {api_key}")  # 你可以在此行调试检查是否加载了正确的API密钥
 
 # 确保 API 密钥和端点存在
@@ -140,4 +137,3 @@ def assistant(query, context):
         return response['choices'][0]['message']['content']
     except Exception as e:
         raise ValueError(f"Error in assistant: {e}")
-
