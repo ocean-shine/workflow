@@ -65,6 +65,11 @@ try:
     wine_data = pd.read_csv(f'{current_directory}/../wine-ratings.csv')
     print("Wine data loaded successfully.")
     logger.info("Wine data loaded successfully.")  # 记录日志
+
+    # 随机抽取 10% 的数据
+    wine_data = wine_data.sample(frac=0.1, random_state=42)  # frac=0.1 表示 10%，random_state 固定随机种子
+    print(f"Sampled 10% of the data. Shape: {wine_data.shape}")
+    logger.info(f"Sampled 10% of the data. Shape: {wine_data.shape}")  # 记录日志
 except Exception as e:
     print(f"Error loading wine data: {e}")
     logger.error(f"Error loading wine data: {e}")  # 记录错误日志
