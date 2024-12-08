@@ -16,9 +16,9 @@ jobs:
       AZURE_GROUP_NAME: workflow-resource-group
       AZURE_REGION: eastus
       IMAGE_NAME: ghcr.io/ocean-shine/workflow:latest
-      OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-      OPENAI_API_BASE: https://aiocean.openai.azure.com/
-      OPENAI_API_VERSION: "2024-08-01-preview"
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_API_BASE: https://aiocean.openai.azure.com/
+      AZURE_OPENAI_API_VERSION: "2024-08-01-preview"
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       GHCR_USERNAME: ocean-shine
       DOCKER_BUILD_REQUIRED: false  # 可以设置为 true 来构建镜像
@@ -51,6 +51,7 @@ jobs:
           docker push ${{ env.IMAGE_NAME }}
           echo "Docker image pushed successfully."
 
+      # 部署到 Azure Container App
       - name: Deploy to Azure Container App
         run: |
           echo "Deploying Docker image to Azure Container App..."
@@ -135,7 +136,7 @@ jobs:
             --name ${{ env.AZURE_CONTAINER_APP_NAME }} \
             --resource-group ${{ env.AZURE_GROUP_NAME }} \
             --cpu 2 --memory 4Gi \
-            --env-vars OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} OPENAI_API_BASE=${{ env.OPENAI_API_BASE }} OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }} \
+            --env-vars AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} AZURE_OPENAI_API_BASE=${{ env.AZURE_OPENAI_API_BASE }} AZURE_OPENAI_API_VERSION=${{ env.AZURE_OPENAI_API_VERSION }} \
             --ingress external --target-port 80 --environment ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} \
             --image ${{ env.IMAGE_NAME }} \
             --registry-server ghcr.io \
