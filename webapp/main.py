@@ -152,7 +152,7 @@ def assistant(query, context):
         ]
 
         # 调用 Azure OpenAI 的聊天模型
-        response = client.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",  # 使用 GPT-4 或你配置的有效模型
             messages=messages
         )
