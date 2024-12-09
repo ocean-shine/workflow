@@ -12,3 +12,12 @@ pandas
 fastapi 
 faiss-cpu 
 numpy 
+qdrant-client
+transformers 
+pillow 
+torch==2.4.0 
+torchvision==0.19.0 
+torchaudio==2.4.0
+librosa
+torchaudio
+opencv-python
