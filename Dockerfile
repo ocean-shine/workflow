@@ -6,9 +6,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     jq \
     vim \
-    gnupg && \
-    curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    gnupg \
+    libgl1-mesa-glx \   # 安装 libGL.so.1 依赖
+    libglib2.0-0 \       # 安装一些其他图形库的依赖（视情况而定）
+    libsm6 \             # 安装额外依赖，可能对 OpenCV 有帮助
+    libxext6 \           # 图形相关的依赖
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 升级 pip 并安装通用依赖
 RUN pip install --no-cache-dir --upgrade pip 
@@ -20,10 +23,8 @@ WORKDIR /workflow
 COPY . /workflow
 
 # 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /requirements.txt
 
-# 确保 main.py 文件在 /workflow/webapp 目录
-RUN ls /workflow  # 检查是否成功复制了 main.py
 
 # 启动 FastAPI 应用并确保输出日志
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
