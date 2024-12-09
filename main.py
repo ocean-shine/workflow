@@ -6,8 +6,8 @@ import shutil
 from typing import List
 
 # 设置 HTTP 和 HTTPS 代理
-os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 # 初始化 FastAPI 应用
 app = FastAPI()
