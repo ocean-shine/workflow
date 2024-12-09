@@ -11,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     vim \
     gnupg \
     libgl1-mesa-glx \     # 安装 libGL.so.1 依赖
-    libglib2.0-0 \         # 安装一些其他图形库的依赖（视情况而定）
     libsm6 \               # 安装额外依赖，可能对 OpenCV 有帮助
     libxext6 \             # 图形相关的依赖
     libxrender-dev \       # 提供图形渲染支持
@@ -21,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \               # 视频解码支持（对于视频读取很重要）
     build-essential \      # 安装编译工具
     cmake \                # 安装 cmake，用于构建 OpenCV
+    ibglib2.0-0 \         # 安装一些其他图形库的依赖（视情况而定）
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 安装 Python 和 pip
