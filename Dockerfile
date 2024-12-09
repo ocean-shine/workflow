@@ -4,24 +4,36 @@ FROM ubuntu:22.04
 # 设置环境变量，确保交互模式不会影响安装
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 更新并安装基本依赖
 RUN apt-get update && apt-get install -y \
     curl \
     jq \
     vim \
     gnupg \
-    libgl1-mesa-glx \     # 安装 libGL.so.1 依赖
-    libsm6 \               # 安装额外依赖，可能对 OpenCV 有帮助
-    libxext6 \             # 图形相关的依赖
-    libxrender-dev \       # 提供图形渲染支持
-    libfontconfig1 \       # 字体配置支持
-    libx11-6 \             # X11 相关的依赖
-    libv4l-dev \           # 视频设备的开发库
-    ffmpeg \               # 视频解码支持（对于视频读取很重要）
-    build-essential \      # 安装编译工具
-    cmake \                # 安装 cmake，用于构建 OpenCV
-    ibglib2.0-0 \         # 安装一些其他图形库的依赖（视情况而定）
+    libgl1-mesa-glx \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libfontconfig1 \
+    libx11-6 \
+    libv4l-dev \
+    ffmpeg \
+    build-essential \
+    cmake \
+    libglib2.0-0 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 安装 libGL.so.1 依赖
+# 安装额外依赖，可能对 OpenCV 有帮助
+# 图形相关的依赖
+# 提供图形渲染支持
+# 字体配置支持
+# X11 相关的依赖
+# 视频设备的开发库
+# 视频解码支持（对于视频读取很重要）
+# 安装编译工具
+# 安装 cmake，用于构建 OpenCV
+# 安装一些其他图形库的依赖（视情况而定）
+
 
 # 安装 Python 和 pip
 RUN apt-get update && apt-get install -y python3 python3-pip python3-dev
