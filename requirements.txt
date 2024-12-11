@@ -21,4 +21,7 @@ torchaudio==2.4.0
 librosa
 torchaudio
 opencv-python
-python-multipart
+pydub
+moviepy
+scikit-learn
+

@@ -14,7 +14,3 @@ class TextEncoder:
         embeddings = self.model.encode(texts)
         return np.array(embeddings).astype('float32')
     
-# 取消 HTTP 和 HTTPS 代理
-# os.environ.pop('HTTP_PROXY', None)
-# os.environ.pop('HTTPS_PROXY', None)
-

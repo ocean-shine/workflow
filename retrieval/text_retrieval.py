@@ -5,7 +5,12 @@ from retrieval.rag import RAG
 class TextRetrieval:
     def __init__(self):
         self.text_encoder = TextEncoder()
-        self.rag = RAG(dimension=768)  # Example dimension
+        self.rag = RAG(use_qdrant=True, qdrant_config={
+            'url': 'http://localhost:6333',
+            'port': 6333
+        })
+        # 确保 Qdrant 集合已初始化
+         # 添加这一行来初始化 Qdrant 集合
 
     def retrieval_csv(self, query, file_path):
         """
@@ -22,6 +27,12 @@ class TextRetrieval:
 
             # 生成文本嵌入向量
             embeddings = self.text_encoder.encode(notes)
+
+            # 将嵌入向量转换为 NumPy 数组（确保格式兼容）
+            embeddings = np.array(embeddings)
+
+            # 动态设置文本嵌入的维度
+            self.rag.set_embedding_dimension(modality="text", embeddings=embeddings)
 
             # 添加到索引，指定 modality 为 'text'
             modality = "text"
