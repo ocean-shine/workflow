@@ -35,7 +35,7 @@ WORKDIR /workflow
 COPY . /workflow  
 # 将代码复制到容器的工作目录
 
-RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt  
+RUN pip install --no-cache-dir --upgrade -r requirements.txt  
 # 安装项目依赖
 
 ENV QDRANT_URL=http://qdrant:6333  
