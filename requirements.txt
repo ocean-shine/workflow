@@ -26,6 +26,7 @@ moviepy
 scikit-learn
 fitz
 pymupdf
+PyMuPDF
 openai-whisper
 SpeechRecognition
 moviepy
