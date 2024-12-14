@@ -1,33 +1,45 @@
-# 基于 Python 3.10 的镜像
 FROM python:3.10-slim
 
-# 安装 Azure CLI 和其他工具
 RUN apt-get update && apt-get install -y \
     curl \
     jq \
     vim \
     ffmpeg \
-    gnupg && \
+    gnupg \
+    libgl1-mesa-glx \
+    libsm6 libxext6 libxrender-dev \
+    libpoppler-cpp-dev \
+    poppler-utils \
+    libjpeg-dev \
+    libtiff-dev \
+    libpng-dev && \
     curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*  
+# 安装 curl, jq, vim, ffmpeg, gnupg, OpenCV, PDF 解析和图像相关依赖，安装 Azure CLI，清理缓存
 
+RUN pip install --no-cache-dir qdrant-client  
 # 安装 Qdrant 客户端
-RUN pip install --no-cache-dir qdrant-client
 
-# 升级 pip 并安装通用依赖
-RUN pip install --no-cache-dir --upgrade pip 
+RUN pip install --no-cache-dir opencv-python-headless  
+# 安装 OpenCV 库
 
+RUN pip install --no-cache-dir PyMuPDF  
+# 安装 PyMuPDF 库，用于 PDF 处理
+
+RUN pip install --no-cache-dir --upgrade pip  
+# 升级 pip
+
+WORKDIR /workflow  
 # 设置工作目录
-WORKDIR /workflow
 
-# 将 Dockerfile 所在路径的所有文件复制到 Docker 容器中的 /workflow 文件夹
-COPY . /workflow
+COPY . /workflow  
+# 将代码复制到容器的工作目录
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt  
+# 安装项目依赖
 
-# 环境变量设置（连接 Qdrant）
-ENV QDRANT_URL=http://qdrant:6333
+ENV QDRANT_URL=http://qdrant:6333  
+# 设置 Qdrant 服务地址
 
-# 启动 FastAPI 应用并确保输出日志
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]  
+# 启动 FastAPI 应用
