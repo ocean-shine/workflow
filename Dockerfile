@@ -41,9 +41,6 @@ RUN rm -f /usr/bin/python /usr/bin/pip \
     && ln -s /usr/bin/python3.10 /usr/bin/python \
     && ln -s /usr/bin/pip3 /usr/bin/pip
 
-# 安装 Qdrant 客户端
-RUN pip install --no-cache-dir qdrant-client
-
 # 升级 pip 并安装通用依赖
 RUN pip install --no-cache-dir --upgrade pip
 
