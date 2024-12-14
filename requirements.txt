@@ -24,7 +24,6 @@ opencv-python
 pydub
 moviepy
 scikit-learn
-fitz
 PyMuPDF==1.16.14
 openai-whisper
 SpeechRecognition
