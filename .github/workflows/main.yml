@@ -59,35 +59,33 @@ jobs:
         run: |
           echo "Starting Docker Compose for Qdrant and Uvicorn..."
           docker-compose -f - <<EOF
-version: '3'
-services:
-  uvicorn-app:
-    build:
-      context: .  # 使用当前目录中的 Dockerfile 构建镜像
-    ports:
-      - "8000:80"  # 映射端口，确保 Uvicorn 能对外暴露 80 端口
-    environment:
-      - QDRANT_URL=http://qdrant:6333  # 设置容器内部的 Qdrant 服务地址
-    depends_on:
-      - qdrant  # 确保 Qdrant 服务启动后再启动 Uvicorn
+            version: '3'
+            services:
+              uvicorn-app:
+                build:
+                  context: .  # 使用当前目录中的 Dockerfile 构建镜像
+                ports:
+                  - "8000:80"  # 映射端口，确保 Uvicorn 能对外暴露 80 端口
+                environment:
+                  - QDRANT_URL=http://qdrant:6333  # 设置容器内部的 Qdrant 服务地址
+                depends_on:
+                  - qdrant  # 确保 Qdrant 服务启动后再启动 Uvicorn
 
-  qdrant:
-    image: qdrant/qdrant:latest  # 使用官方 Qdrant 镜像
-    ports:
-      - "6333:6333"  # 暴露 Qdrant 默认端口
-    volumes:
-      - qdrant_storage:/qdrant/storage  # 使用持久化存储
+              qdrant:
+                image: qdrant/qdrant:latest  # 使用官方 Qdrant 镜像
+                ports:
+                  - "6333:6333"  # 暴露 Qdrant 默认端口
+                volumes:
+                  - qdrant_storage:/qdrant/storage  # 使用持久化存储
 
-volumes:
-  qdrant_storage:
-EOF
-          docker-compose up -d  # 启动容器
+            volumes:
+              qdrant_storage:
+          EOF
 
       # 部署到 Azure Container App
       - name: Deploy to Azure Container App
         run: |
           echo "Deploying Docker image to Azure Container App..."
-
           # 登录到 Azure CLI 使用 Service Principal
           echo "Logging into Azure..."
           az login --service-principal \
@@ -95,14 +93,12 @@ EOF
             --password ${{ secrets.AZURE_CLIENT_SECRET }} \
             --tenant ${{ secrets.AZURE_TENANT_ID }}
           echo "Azure login successful."
-
           # 删除资源组（如果存在），并等待删除完成
           RESOURCE_GROUP_EXISTS=$(az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
           if [ "$RESOURCE_GROUP_EXISTS" != "NOT_FOUND" ]; then
             echo "Resource Group exists, deleting: ${{ env.AZURE_GROUP_NAME }}"
             az group delete --name ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
             echo "Resource Group deletion started. Waiting for it to be deleted..."
-
             # 等待资源组删除完成
             until ! az group show --name ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Resource group still exists. Waiting for 1 minute..."
@@ -112,7 +108,6 @@ EOF
           else
             echo "Resource group does not exist, skipping deletion."
           fi
-
           # 删除容器应用环境（如果存在），并等待删除完成
           ENV_EXISTS=$(az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
           
@@ -120,7 +115,6 @@ EOF
             echo "Container App environment exists, deleting: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
             az containerapp env delete --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
             echo "Container App environment deletion started. Waiting for it to be deleted..."
-
             # 等待容器应用环境删除完成
             until ! az containerapp env show --name ${{ env.AZURE_CONTAINER_APP_ENV_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Container app environment still exists. Waiting for 1 minute..."
@@ -130,7 +124,6 @@ EOF
           else
             echo "Container app environment does not exist, skipping deletion."
           fi
-
           # 删除容器应用（如果存在），并等待删除完成
           APP_EXISTS=$(az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null || echo "NOT_FOUND")
           
@@ -138,7 +131,6 @@ EOF
             echo "Container app exists, deleting: ${{ env.AZURE_CONTAINER_APP_NAME }}"
             az containerapp delete --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --yes --no-wait
             echo "Container app deletion started. Waiting for it to be deleted..."
-
             # 等待容器应用删除完成
             until ! az containerapp show --name ${{ env.AZURE_CONTAINER_APP_NAME }} --resource-group ${{ env.AZURE_GROUP_NAME }} --query 'name' -o tsv 2>/dev/null; do
               echo "Container app still exists. Waiting for 1 minute..."
@@ -148,12 +140,10 @@ EOF
           else
             echo "Container app does not exist, skipping deletion."
           fi
-
           # 确认资源删除完成后，重新创建资源组
           echo "Creating Resource Group: ${{ env.AZURE_GROUP_NAME }}"
           az group create --name ${{ env.AZURE_GROUP_NAME }} --location ${{ env.AZURE_REGION }}
           echo "Resource group created successfully."
-
           # 重新创建容器应用环境
           echo "Creating Container App Environment: ${{ env.AZURE_CONTAINER_APP_ENV_NAME }}"
           az containerapp env create \
@@ -161,7 +151,6 @@ EOF
             --resource-group ${{ env.AZURE_GROUP_NAME }} \
             --location ${{ env.AZURE_REGION }}
           echo "Container App environment created successfully."
-
           # 重新创建容器应用
           echo "Creating Container App: ${{ env.AZURE_CONTAINER_APP_NAME }}"
           az containerapp create \
@@ -174,5 +163,4 @@ EOF
             --registry-server ghcr.io \
             --registry-username ${{ env.GHCR_USERNAME }} \
             --registry-password ${{ secrets.GHCR_TOKEN }}
-
           echo "Azure Container App deployment complete!"
