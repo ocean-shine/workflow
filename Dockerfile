@@ -30,8 +30,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 设置 Python3 默认
-RUN ln -s /usr/bin/python3.10 /usr/bin/python \
+# 删除现有的 pip 符号链接并创建新的符号链接
+RUN rm -f /usr/bin/python /usr/bin/pip \
+    && ln -s /usr/bin/python3.10 /usr/bin/python \
     && ln -s /usr/bin/pip3 /usr/bin/pip
 
 # 安装 Qdrant 客户端
