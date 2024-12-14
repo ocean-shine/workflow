@@ -17,6 +17,16 @@ RUN apt-get update && apt-get install -y \
     python3.10-dev \
     python3-pip \
     python3.10-venv \
+    libgl1-mesa-glx \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libpoppler-cpp-dev \
+    poppler-utils \
+    libjpeg-dev \
+    libtiff-dev \
+    libpng-dev \
+    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
