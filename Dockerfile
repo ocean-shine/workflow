@@ -1,45 +1,47 @@
-FROM python:3.10-slim
+# 使用 Ubuntu 22.04 作为基础镜像
+FROM ubuntu:22.04
 
+# 设置环境变量，避免交互式安装
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 更新 apt 包索引并安装系统依赖，包括 Python 和编译工具
 RUN apt-get update && apt-get install -y \
     curl \
     jq \
     vim \
     ffmpeg \
     gnupg \
-    libgl1-mesa-glx \
-    libsm6 libxext6 libxrender-dev \
-    libpoppler-cpp-dev \
-    poppler-utils \
-    libjpeg-dev \
-    libtiff-dev \
-    libpng-dev && \
-    curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*  
-# 安装 curl, jq, vim, ffmpeg, gnupg, OpenCV, PDF 解析和图像相关依赖，安装 Azure CLI，清理缓存
+    build-essential \   
+    libmupdf-dev \      
+    python3.10 \
+    python3.10-dev \
+    python3-pip \
+    python3.10-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# 安装 gcc 和 make 等工具
+# 安装 MuPDF 库（PyMuPDF 的依赖）
+# 设置 Python3 默认
+RUN ln -s /usr/bin/python3.10 /usr/bin/python \
+    && ln -s /usr/bin/pip3 /usr/bin/pip
 
-RUN pip install --no-cache-dir qdrant-client  
 # 安装 Qdrant 客户端
+RUN pip install --no-cache-dir qdrant-client
 
-RUN pip install --no-cache-dir opencv-python-headless  
-# 安装 OpenCV 库
+# 升级 pip 并安装通用依赖
+RUN pip install --no-cache-dir --upgrade pip
 
-RUN pip install --no-cache-dir PyMuPDF  
-# 安装 PyMuPDF 库，用于 PDF 处理
-
-RUN pip install --no-cache-dir --upgrade pip  
-# 升级 pip
-
-WORKDIR /workflow  
 # 设置工作目录
+WORKDIR /workflow
 
-COPY . /workflow  
-# 将代码复制到容器的工作目录
+# 将 Dockerfile 所在路径的所有文件复制到容器中的 /workflow 文件夹
+COPY . /workflow
 
-RUN pip install --no-cache-dir --upgrade -r requirements.txt  
-# 安装项目依赖
+# 安装 Python 依赖
+RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
 
-ENV QDRANT_URL=http://qdrant:6333  
-# 设置 Qdrant 服务地址
+# 环境变量设置（连接 Qdrant）
+ENV QDRANT_URL=http://qdrant:6333
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]  
-# 启动 FastAPI 应用
+# 启动 FastAPI 应用并确保输出日志
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
