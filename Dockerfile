@@ -26,10 +26,8 @@ COPY . /workflow
 # 安装 Python 依赖
 RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
 
-
-
 # 环境变量设置（连接 Qdrant）
-ENV QDRANT_URL=http://qdrant:6333  # 指定容器内的 Qdrant 服务地址
+ENV QDRANT_URL=http://qdrant:6333
 
 # 启动 FastAPI 应用并确保输出日志
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
