@@ -108,6 +108,11 @@ app.mount("/static", StaticFiles(directory=os.path.join(os.getcwd(), "data")), n
 def get_html_file_path():
     return os.path.join(html_output_folder, "response.html")
 
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the FastAPI app!"}
+
 @app.get('/response', response_class=HTMLResponse)
 async def get_response(request: Request):
     """
