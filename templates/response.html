@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Response</title>
+</head>
+<body>
+    <h1>LLM Response</h1>
+    <p><strong>Query:</strong> {{ query }}</p> <!-- 显示用户输入的查询 -->
+
+    <p><strong>Response:</strong></p>
+    <p>{{ response }}</p>
+
+    <h2>Messages:</h2>
+    <div id="messages">
+        {% for message in messages %}
+            <div>
+                <p><strong>Text:</strong> {{ message.text }}</p>
+                <div id="images">
+                    {% for image in message.images %}
+                        <img src="{{ image }}" alt="Image" width="300"/>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

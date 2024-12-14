@@ -1,7 +1,7 @@
 # retrieval/multimodal_retrieval.py
 
 from .text_retrieval import TextRetrieval
-from .image_retrieval import ImageRetrieval
+from .pdf_retrieval import ImageRetrieval
 from .audio_retrieval import AudioRetrieval
 from .video_retrieval import VideoRetrieval
 

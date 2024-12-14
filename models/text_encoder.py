@@ -4,8 +4,6 @@ import os
 
 
 
-
-
 class TextEncoder:
     def __init__(self, model_name="sentence-transformers/paraphrase-distilroberta-base-v1"):
         self.model = SentenceTransformer(model_name)
@@ -13,4 +11,6 @@ class TextEncoder:
     def encode(self, texts):
         embeddings = self.model.encode(texts)
         return np.array(embeddings).astype('float32')
+    
+    
     

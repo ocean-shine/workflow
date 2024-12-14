@@ -24,4 +24,10 @@ opencv-python
 pydub
 moviepy
 scikit-learn
-
+fitz
+pymupdf
+openai-whisper
+SpeechRecognition
+moviepy
+python-multipart
+jinja2

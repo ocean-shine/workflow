@@ -6,9 +6,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     jq \
     vim \
+    ffmpeg \
     gnupg && \
     curl -sL https://aka.ms/InstallAzureCLIDeb | bash && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 安装 Qdrant 客户端
+RUN pip install --no-cache-dir qdrant-client
 
 # 升级 pip 并安装通用依赖
 RUN pip install --no-cache-dir --upgrade pip 
@@ -22,11 +26,10 @@ COPY . /workflow
 # 安装 Python 依赖
 RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
 
-# 确保 main.py 文件在 /workflow/webapp 目录
-RUN ls /workflow/webapp  # 检查是否成功复制了 main.py
 
-# 进入 /workflow/webapp 目录
-WORKDIR /workflow/webapp
+
+# 环境变量设置（连接 Qdrant）
+ENV QDRANT_URL=http://qdrant:6333  # 指定容器内的 Qdrant 服务地址
 
 # 启动 FastAPI 应用并确保输出日志
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
