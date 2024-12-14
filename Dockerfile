@@ -11,16 +11,15 @@ RUN apt-get update && apt-get install -y \
     vim \
     ffmpeg \
     gnupg \
-    build-essential \   
-    libmupdf-dev \      
+    build-essential \
+    libmupdf-dev \
     python3.10 \
     python3.10-dev \
     python3-pip \
     python3.10-venv \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-# 安装 gcc 和 make 等工具
-# 安装 MuPDF 库（PyMuPDF 的依赖）
+
 # 设置 Python3 默认
 RUN ln -s /usr/bin/python3.10 /usr/bin/python \
     && ln -s /usr/bin/pip3 /usr/bin/pip
@@ -38,7 +37,7 @@ WORKDIR /workflow
 COPY . /workflow
 
 # 安装 Python 依赖
-RUN pip install --no-cache-dir --upgrade -r /workflow/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # 环境变量设置（连接 Qdrant）
 ENV QDRANT_URL=http://qdrant:6333
