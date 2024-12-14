@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, Form, Request
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware  # 导入 CORSMiddleware
@@ -103,6 +103,10 @@ os.makedirs(html_output_folder, exist_ok=True)
 # 配置静态文件的路由
 app.mount("/static", StaticFiles(directory=os.path.join(os.getcwd(), "data")), name="static")
 
+# Favicon 处理
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/favicon.ico")
 
 # 用于保存 HTML 文件的路径
 def get_html_file_path():
