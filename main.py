@@ -106,7 +106,7 @@ app.mount("/static", StaticFiles(directory=os.path.join(os.getcwd(), "data")), n
 # Favicon 处理
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse("static/favicon.ico")
+    return FileResponse("static/songoku.ico")
 
 # 用于保存 HTML 文件的路径
 def get_html_file_path():
