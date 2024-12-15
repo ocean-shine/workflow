@@ -13,8 +13,8 @@ from agent import Agent  # 假设你有一个 Agent 类来处理查询
 import logging
 
 # 设置 HTTP 和 HTTPS 代理（如果需要）
-# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 def save_uploaded_files(files: List[UploadFile], data_folder: str):
     os.makedirs(data_folder, exist_ok=True)  # 确保目标文件夹存在
@@ -113,14 +113,6 @@ def get_html_file_path():
     return os.path.join(html_output_folder, "response.html")
 
 
-@app.get("/upload")
-async def upload_form(request: Request):
-    """
-    显示文件上传和查询输入的表单页面
-    """
-    return templates.TemplateResponse("upload_form.html", {"request": request})
-
-
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI app!"}
@@ -144,7 +136,6 @@ async def get_response(request: Request):
         "response": response,
         "messages": messages
     })
-
 
 @app.post('/response', response_class=HTMLResponse)
 async def ask(query: str = Form(...), files: List[UploadFile] = File(None), request: Request = None):
@@ -170,6 +161,7 @@ async def ask(query: str = Form(...), files: List[UploadFile] = File(None), requ
         print(f"Processing query with agent.")
         result = agent.process_request(query, data)
         print(f"Agent processed the request successfully.")
+        print("result:", result)
 
         # 获取 LLM 响应和消息
         llm_response = result.get("llm_response", "")
@@ -218,9 +210,3 @@ async def ask(query: str = Form(...), files: List[UploadFile] = File(None), requ
     except Exception as e:
         print(f"Error processing request: {e}")
         return {"error": str(e)}
-
-
-
-
-
-
