@@ -52,8 +52,17 @@ RUN echo '[supervisord]' > /etc/supervisord.conf && \
     echo 'nodaemon=true' >> /etc/supervisord.conf && \
     echo '[program:qdrant]' >> /etc/supervisord.conf && \
     echo 'command=/usr/local/bin/qdrant' >> /etc/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisord.conf && \
+    echo 'stderr_logfile=/dev/stderr' >> /etc/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisord.conf && \
+    echo 'stderr_logfile_maxbytes=0' >> /etc/supervisord.conf && \
     echo '[program:uvicorn]' >> /etc/supervisord.conf && \
-    echo 'command=uvicorn main:app --host 0.0.0.0 --port 80' >> /etc/supervisord.conf
+    echo 'command=uvicorn main:app --host 0.0.0.0 --port 80 --log-level debug' >> /etc/supervisord.conf && \
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisord.conf && \
+    echo 'stderr_logfile=/dev/stderr' >> /etc/supervisord.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisord.conf && \
+    echo 'stderr_logfile_maxbytes=0' >> /etc/supervisord.conf
 
 # 使用 supervisord 同时运行 Qdrant 和 Uvicorn
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+
