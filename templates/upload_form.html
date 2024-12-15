@@ -1,0 +1,21 @@
+<!-- templates/upload_form.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File and Query</title>
+</head>
+<body>
+    <h1>Upload a file and enter your query</h1>
+    <form action="/response" method="post" enctype="multipart/form-data">
+        <label for="query">Query:</label>
+        <input type="text" id="query" name="query" required><br><br>
+
+        <label for="files">Select files:</label>
+        <input type="file" id="files" name="files" multiple><br><br>
+
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>

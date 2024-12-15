@@ -113,6 +113,14 @@ def get_html_file_path():
     return os.path.join(html_output_folder, "response.html")
 
 
+@app.get("/upload")
+async def upload_form(request: Request):
+    """
+    显示文件上传和查询输入的表单页面
+    """
+    return templates.TemplateResponse("upload_form.html", {"request": request})
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI app!"}
