@@ -13,8 +13,8 @@ from agent import Agent  # 假设你有一个 Agent 类来处理查询
 import logging
 
 # 设置 HTTP 和 HTTPS 代理（如果需要）
-os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 def save_uploaded_files(files: List[UploadFile], data_folder: str):
     os.makedirs(data_folder, exist_ok=True)  # 确保目标文件夹存在
