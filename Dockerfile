@@ -60,7 +60,7 @@ ENV QDRANT_URL=http://qdrant:6333
 RUN apt-get update && apt-get install -y docker.io
 
 # 下载并解压 Qdrant
-RUN curl -L https://github.com/qdrant/qdrant/releases/download/v0.9.1/qdrant-linux-amd64-v0.9.1.tar.gz | tar -xz
+RUN curl -L https://github.com/qdrant/qdrant/releases/download/v1.12.5/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz
 
 # 启动 Qdrant 和 Uvicorn
 CMD sh -c "docker run --rm -d -p 6333:6333 qdrant/qdrant:latest && uvicorn main:app --host 0.0.0.0 --port 80"
