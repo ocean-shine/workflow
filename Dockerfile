@@ -56,5 +56,11 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 # 环境变量设置（连接 Qdrant）
 ENV QDRANT_URL=http://qdrant:6333
 
-# 启动 FastAPI 应用并确保输出日志
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
+# 安装 Docker（用于容器内运行 Qdrant 服务）
+RUN apt-get update && apt-get install -y docker.io
+
+# 下载并解压 Qdrant
+RUN curl -L https://github.com/qdrant/qdrant/releases/download/v0.9.1/qdrant-linux-amd64-v0.9.1.tar.gz | tar -xz
+
+# 启动 Qdrant 和 Uvicorn
+CMD sh -c "docker run --rm -d -p 6333:6333 qdrant/qdrant:latest && uvicorn main:app --host 0.0.0.0 --port 80"
