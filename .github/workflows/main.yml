@@ -65,36 +65,10 @@ jobs:
       - name: Start Docker Compose for Qdrant and Uvicorn
         run: |
           echo "Starting Docker Compose for Qdrant and Uvicorn..."
-          docker-compose -f - <<EOF
-            version: '3'
-            services:
-              uvicorn-app:
-                build:
-                  context: .  # 使用当前目录中的 Dockerfile 构建镜像
-                ports:
-                  - "8000:80"  # 映射端口，确保 Uvicorn 能对外暴露 80 端口
-                environment:
-                  - QDRANT_URL=http://qdrant:6333  # 设置容器内部的 Qdrant 服务地址
-                depends_on:
-                  - qdrant
-                healthcheck:
-                  test: ["CMD", "curl", "-f", "http://qdrant:6333/collections"]
-                  interval: 30s
-                  retries: 5
-
-              qdrant:
-                image: qdrant/qdrant:latest
-                ports:
-                  - "6333:6333"
-                volumes:
-                  - qdrant_storage:/qdrant/storage  # 使用持久化存储
-                healthcheck:
-                  test: ["CMD", "curl", "-f", "http://localhost:6333/collections"]
-                  interval: 30s
-                  retries: 5
-            volumes:
-              qdrant_storage:
-          EOF
+          # 使用已经创建好的 docker-compose.yml 文件启动服务
+          docker-compose -f docker-compose.yml up -d
+          echo "Docker Compose started successfully."
+      
 
       # 部署到 Azure Container App
       - name: Deploy to Azure Container App
