@@ -62,12 +62,12 @@ jobs:
           echo "Docker image pushed successfully."
 
       # 启动 Docker Compose 来运行 Qdrant 和 Uvicorn 容器，并构建镜像
-      - name: Start Docker Compose for Qdrant and Uvicorn
-        run: |
-          echo "Starting Docker Compose for Qdrant and Uvicorn..."
-          # 使用相对路径指定正确的 docker-compose.yml 文件路径
-          docker-compose -f docker-compose.yml up --build -d
-          echo "Docker Compose started successfully."
+      # - name: Start Docker Compose for Qdrant and Uvicorn
+      #   run: |
+      #     echo "Starting Docker Compose for Qdrant and Uvicorn..."
+      #     # 使用相对路径指定正确的 docker-compose.yml 文件路径
+      #     docker-compose -f docker-compose.yml up --build -d
+      #     echo "Docker Compose started successfully."
 
       
 
