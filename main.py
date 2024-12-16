@@ -11,10 +11,12 @@ import json
 import numpy as np
 from agent import Agent  # 假设你有一个 Agent 类来处理查询
 import logging
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 
 # 设置 HTTP 和 HTTPS 代理（如果需要）
-# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 def save_uploaded_files(files: List[UploadFile], data_folder: str):
     os.makedirs(data_folder, exist_ok=True)  # 确保目标文件夹存在
@@ -112,6 +114,23 @@ async def favicon():
 def get_html_file_path():
     return os.path.join(html_output_folder, "response.html")
 
+# 自定义异常处理器
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """
+    捕获 HTTP 异常并返回自定义响应。
+    """
+    if exc.status_code == 504:
+        # 针对 504 错误，返回友好提示
+        return JSONResponse(
+            content={"message": "Server is processing your request. Please wait..."},
+            status_code=200  # 将状态码设置为 200 表示继续处理
+        )
+    # 其他异常保持原样
+    return JSONResponse(
+        content={"message": exc.detail},
+        status_code=exc.status_code
+    )
 
 @app.get("/")
 def read_root():
@@ -205,8 +224,40 @@ async def ask(query: str = Form(...), files: List[UploadFile] = File(None), requ
 
         # 返回文件的 URL（在 static 文件夹下提供访问）
         html_file_url = f"/static/html_output/{os.path.basename(html_file_path)}"
-        return RedirectResponse(url=html_file_url, status_code=303)  # 重定向到文件 URL
+        RedirectResponse(url=html_file_url, status_code=303)  # 重定向到文件 URL
 
+        return HTMLResponse(
+            content=f"""
+            <html>
+                <head>
+                    <title>Processing Complete</title>
+                    <meta http-equiv="refresh" content="0; url={html_file_url}" />
+                </head>
+                <body>
+                    <h1>Processing Complete</h1>
+                    <p>Your query: <strong>{query}</strong></p>
+                    <p>Files uploaded: <strong>{len(files) if files else 0}</strong></p>
+                    
+                    <!-- 超链接展示部分 -->
+                    <p>
+                        <a href="{html_file_url}" target="_blank" style="font-size:16px; color:blue;">
+                            Click here to view the result
+                        </a>
+                    </p>
+                </body>
+            </html>
+            """,
+            status_code=303,
+            headers={"Location": html_file_url}  # 返回 RedirectResponse 保持不变
+        )
+
+    except HTTPException as http_exc:
+        # 针对 HTTPException 单独处理
+        if http_exc.status_code == 504:
+            raise HTTPException(status_code=504, detail="Request is taking longer than expected.")
+        raise  # 其他 HTTPException 原样抛出
     except Exception as e:
+        # 捕获所有其他异常
         print(f"Error processing request: {e}")
-        return {"error": str(e)}
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
