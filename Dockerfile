@@ -57,7 +57,7 @@ RUN echo '[supervisord]' > /etc/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisord.conf && \
     echo 'stderr_logfile_maxbytes=0' >> /etc/supervisord.conf && \
     echo '[program:uvicorn]' >> /etc/supervisord.conf && \
-    echo 'command=uvicorn main:app --host 0.0.0.0 --port 80 --timeout-keep-alive 0 --log-level debug' >> /etc/supervisord.conf && \
+    echo 'command=uvicorn main:app --host 0.0.0.0 --port 80 --timeout-keep-alive 6000 --log-level debug' >> /etc/supervisord.conf && \
     echo 'stdout_logfile=/dev/stdout' >> /etc/supervisord.conf && \
     echo 'stderr_logfile=/dev/stderr' >> /etc/supervisord.conf && \
     echo 'stdout_logfile_maxbytes=0' >> /etc/supervisord.conf && \

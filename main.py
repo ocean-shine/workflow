@@ -65,7 +65,7 @@ qdrant_config = {
     "host": "localhost",       # Qdrant 服务地址
     "port": 6333,              # Qdrant 服务端口
     "https": False,            # 是否使用 HTTPS 连接，如果是 HTTPS，则设为 True
-    "timeout": 10              # 可选，设置超时时间
+    "timeout": 6000              # 可选，设置超时时间
 }
 
 
