@@ -15,8 +15,8 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 # 设置 HTTP 和 HTTPS 代理（如果需要）
-os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
-os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+# os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
 def save_uploaded_files(files: List[UploadFile], data_folder: str):
     os.makedirs(data_folder, exist_ok=True)  # 确保目标文件夹存在
@@ -224,32 +224,8 @@ async def ask(query: str = Form(...), files: List[UploadFile] = File(None), requ
 
         # 返回文件的 URL（在 static 文件夹下提供访问）
         html_file_url = f"/static/html_output/{os.path.basename(html_file_path)}"
-        RedirectResponse(url=html_file_url, status_code=303)  # 重定向到文件 URL
-
-        return HTMLResponse(
-            content=f"""
-            <html>
-                <head>
-                    <title>Processing Complete</title>
-                    <meta http-equiv="refresh" content="0; url={html_file_url}" />
-                </head>
-                <body>
-                    <h1>Processing Complete</h1>
-                    <p>Your query: <strong>{query}</strong></p>
-                    <p>Files uploaded: <strong>{len(files) if files else 0}</strong></p>
-                    
-                    <!-- 超链接展示部分 -->
-                    <p>
-                        <a href="{html_file_url}" target="_blank" style="font-size:16px; color:blue;">
-                            Click here to view the result
-                        </a>
-                    </p>
-                </body>
-            </html>
-            """,
-            status_code=303,
-            headers={"Location": html_file_url}  # 返回 RedirectResponse 保持不变
-        )
+        return  RedirectResponse(url=html_file_url, status_code=303)  # 重定向到文件 URL
+        
 
     except HTTPException as http_exc:
         # 针对 HTTPException 单独处理
